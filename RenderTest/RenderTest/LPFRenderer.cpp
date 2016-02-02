@@ -1,5 +1,7 @@
 #include "Precomp.h"
 #include "LPFRenderer.h"
+#include "RenderTarget.h"
+#include "RenderingCommon.h"
 
 LPFRenderer::LPFRenderer(ID3D11Device* device)
     : BaseRenderer(device)
@@ -17,60 +19,48 @@ HRESULT LPFRenderer::Initialize()
     return S_OK;
 }
 
-HRESULT LPFRenderer::BeginFrame(const std::shared_ptr<RenderTarget>& renderTarget, const RenderView& view)
+HRESULT LPFRenderer::RenderFrame(const std::shared_ptr<RenderTarget>& renderTarget, const RenderView& view)
 {
     HRESULT hr = S_OK;
 
     UNREFERENCED_PARAMETER(view);
 
-    FinalRenderTarget = renderTarget;
-
     if (MsaaEnabled)
     {
-        hr = EnsureMsaaRenderTarget();
-        if (FAILED(hr))
-        {
-            assert(false);
-            return hr;
-        }
+        hr = EnsureMsaaRenderTarget(renderTarget);
+        CHECKHR(hr);
 
-        MsaaRenderTarget->Viewport = FinalRenderTarget->Viewport;
+        MsaaRenderTarget->SetViewport(renderTarget->GetViewport());
         CurrentRenderTarget = MsaaRenderTarget;
     }
     else
     {
-        CurrentRenderTarget = FinalRenderTarget;
+        CurrentRenderTarget = renderTarget;
     }
 
     static const float clearColor[] = { 0.f, 0.f, 0.5f, 1.f };
-    Context->ClearRenderTargetView(CurrentRenderTarget->RTV.Get(), clearColor);
-    Context->OMSetRenderTargets(1, CurrentRenderTarget->RTV.GetAddressOf(), nullptr);
-    Context->RSSetViewports(1, &CurrentRenderTarget->Viewport);
+    Context->ClearRenderTargetView(CurrentRenderTarget->GetRTV().Get(), clearColor);
+    Context->OMSetRenderTargets(1, CurrentRenderTarget->GetRTV().GetAddressOf(), nullptr);
+    Context->RSSetViewports(1, &CurrentRenderTarget->GetViewport());
 
-    return S_OK;
-}
+    // TODO: Render scene
 
-HRESULT LPFRenderer::EndFrame()
-{
     if (MsaaEnabled)
     {
-        Context->ResolveSubresource(FinalRenderTarget->Texture.Get(), 0, MsaaRenderTarget->Texture.Get(), 0, FinalRenderTarget->Desc.Format);
+        Context->ResolveSubresource(renderTarget->GetTexture().Get(), 0, MsaaRenderTarget->GetTexture().Get(), 0, renderTarget->GetDesc().Format);
     }
-
-    // Don't hold a reference to final output buffer past EndFrame.
-    FinalRenderTarget = nullptr;
 
     return S_OK;
 }
 
-HRESULT LPFRenderer::EnsureMsaaRenderTarget()
+HRESULT LPFRenderer::EnsureMsaaRenderTarget(const std::shared_ptr<RenderTarget>& finalRenderTarget)
 {
     bool needToCreate = true;
     if (MsaaRenderTarget != nullptr)
     {
-        if (MsaaRenderTarget->Desc.Width == FinalRenderTarget->Desc.Width &&
-            MsaaRenderTarget->Desc.Height == FinalRenderTarget->Desc.Height &&
-            MsaaRenderTarget->Desc.Format == FinalRenderTarget->Desc.Format)
+        if (MsaaRenderTarget->GetDesc().Width == finalRenderTarget->GetDesc().Width &&
+            MsaaRenderTarget->GetDesc().Height == finalRenderTarget->GetDesc().Height &&
+            MsaaRenderTarget->GetDesc().Format == finalRenderTarget->GetDesc().Format)
         {
             needToCreate = false;
         }
@@ -81,23 +71,12 @@ HRESULT LPFRenderer::EnsureMsaaRenderTarget()
         return S_OK;
     }
 
+    D3D11_TEXTURE2D_DESC desc = finalRenderTarget->GetDesc();
+    desc.SampleDesc.Count = 4;
+
     MsaaRenderTarget = std::make_shared<RenderTarget>();
-    MsaaRenderTarget->Desc = FinalRenderTarget->Desc;
-    MsaaRenderTarget->Desc.SampleDesc.Count = 4;
-
-    HRESULT hr = Device->CreateTexture2D(&MsaaRenderTarget->Desc, nullptr, &MsaaRenderTarget->Texture);
-    if (FAILED(hr))
-    {
-        assert(false);
-        return hr;
-    }
-
-    hr = Device->CreateRenderTargetView(MsaaRenderTarget->Texture.Get(), nullptr, &MsaaRenderTarget->RTV);
-    if (FAILED(hr))
-    {
-        assert(false);
-        return hr;
-    }
+    HRESULT hr = MsaaRenderTarget->Initialize(Device.Get(), desc);
+    CHECKHR(hr);
 
     return hr;
 }

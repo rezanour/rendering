@@ -1,8 +1,9 @@
 #pragma once
 
-#include "RenderingCommon.h"
+class RenderTarget;
+struct RenderView;
 
-class BaseRenderer
+class BaseRenderer : NonCopyable
 {
 public:
     BaseRenderer(ID3D11Device* device)
@@ -14,12 +15,7 @@ public:
 
     virtual HRESULT Initialize() = 0;
 
-    virtual HRESULT BeginFrame(const std::shared_ptr<RenderTarget>& renderTarget, const RenderView& view) = 0;
-    virtual HRESULT EndFrame() = 0;
-
-private:
-    BaseRenderer(const BaseRenderer&) = delete;
-    BaseRenderer& operator= (const BaseRenderer&) = delete;
+    virtual HRESULT RenderFrame(const std::shared_ptr<RenderTarget>& renderTarget, const RenderView& view) = 0;
 
 protected:
     ComPtr<ID3D11Device> Device;

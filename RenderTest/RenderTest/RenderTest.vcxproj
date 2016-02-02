@@ -92,6 +92,11 @@
     </ClCompile>
     <ClCompile Include="DxgiPresenter.cpp" />
     <ClCompile Include="LPFRenderer.cpp" />
+    <ClCompile Include="RenderScene.cpp" />
+    <ClCompile Include="RenderTarget.cpp" />
+    <ClCompile Include="RenderVisual.cpp" />
+    <ClCompile Include="VertexBuffer.cpp" />
+    <ClCompile Include="VertexFormats.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BasePresenter.h" />
@@ -100,6 +105,11 @@
     <ClInclude Include="DxgiPresenter.h" />
     <ClInclude Include="LPFRenderer.h" />
     <ClInclude Include="RenderingCommon.h" />
+    <ClInclude Include="RenderScene.h" />
+    <ClInclude Include="RenderTarget.h" />
+    <ClInclude Include="RenderVisual.h" />
+    <ClInclude Include="VertexBuffer.h" />
+    <ClInclude Include="VertexFormats.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

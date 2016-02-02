@@ -11,20 +11,15 @@ public:
 
     virtual HRESULT Initialize() override;
 
-    virtual HRESULT BeginFrame(const std::shared_ptr<RenderTarget>& renderTarget, const RenderView& view) override;
-    virtual HRESULT EndFrame() override;
+    virtual HRESULT RenderFrame(const std::shared_ptr<RenderTarget>& renderTarget, const RenderView& view) override;
 
 private:
-    LPFRenderer(const LPFRenderer&) = delete;
-    LPFRenderer& operator= (const LPFRenderer&) = delete;
-
-    HRESULT EnsureMsaaRenderTarget();
+    HRESULT EnsureMsaaRenderTarget(const std::shared_ptr<RenderTarget>& finalRenderTarget);
 
 private:
     ComPtr<ID3D11DeviceContext> Context;
 
     bool MsaaEnabled;
     std::shared_ptr<RenderTarget> MsaaRenderTarget;
-    std::shared_ptr<RenderTarget> FinalRenderTarget;
     std::shared_ptr<RenderTarget> CurrentRenderTarget;
 };

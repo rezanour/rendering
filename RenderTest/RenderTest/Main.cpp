@@ -1,6 +1,8 @@
 #include "Precomp.h"
 #include "DxgiPresenter.h"
 #include "LPFRenderer.h"
+#include "RenderTarget.h"
+#include "RenderingCommon.h"
 
 using namespace Microsoft::WRL;
 
@@ -56,14 +58,19 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
         {
             // Idle
             RenderView view{};
-            hr = Renderer->BeginFrame(TheRenderTarget, view);
-            if (SUCCEEDED(hr))
+
+            hr = Renderer->RenderFrame(TheRenderTarget, view);
+            if (FAILED(hr))
             {
-                hr = Renderer->EndFrame();
-                if (SUCCEEDED(hr))
-                {
-                    hr = Presenter->Present();
-                }
+                assert(false);
+                break;
+            }
+
+            hr = Presenter->Present();
+            if (FAILED(hr))
+            {
+                assert(false);
+                break;
             }
         }
     }
@@ -141,18 +148,10 @@ HRESULT GfxInitialize()
     dxgiFlags |= DXGI_CREATE_FACTORY_DEBUG;
 #endif
     HRESULT hr = CreateDXGIFactory2(dxgiFlags, IID_PPV_ARGS(&Factory));
-    if (FAILED(hr))
-    {
-        assert(false);
-        return hr;
-    }
+    CHECKHR(hr);
 
     hr = Factory->EnumAdapters(0, &Adapter);
-    if (FAILED(hr))
-    {
-        assert(false);
-        return hr;
-    }
+    CHECKHR(hr);
 
     UINT d3dFlags = 0;
 #ifdef _DEBUG
@@ -163,29 +162,19 @@ HRESULT GfxInitialize()
 
     hr = D3D11CreateDevice(Adapter.Get(), D3D_DRIVER_TYPE_UNKNOWN, nullptr,
         d3dFlags, &featureLevel, 1, D3D11_SDK_VERSION, &Device, nullptr, &Context);
-    if (FAILED(hr))
-    {
-        assert(false);
-        return hr;
-    }
+    CHECKHR(hr);
 
     Presenter.reset(new DxgiPresenter(Device.Get(), AppWindow));
     hr = Presenter->Initialize();
-    if (FAILED(hr))
-    {
-        assert(false);
-        return hr;
-    }
+    CHECKHR(hr);
 
-    TheRenderTarget = std::make_shared<RenderTarget>(Presenter->GetBackBufferRTV().Get());
+    TheRenderTarget = std::make_shared<RenderTarget>();
+    hr = TheRenderTarget->Initialize(Presenter->GetBackBufferRTV().Get());
+    CHECKHR(hr);
 
     Renderer.reset(new LPFRenderer(Device.Get()));
     hr = Renderer->Initialize();
-    if (FAILED(hr))
-    {
-        assert(false);
-        return hr;
-    }
+    CHECKHR(hr);
 
     return hr;
 }

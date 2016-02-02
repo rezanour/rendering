@@ -1,7 +1,7 @@
 #pragma once
 
 // base class for presenters
-class BasePresenter
+class BasePresenter : NonCopyable
 {
 public:
     BasePresenter(ID3D11Device* device)
@@ -16,10 +16,6 @@ public:
     virtual const ComPtr<ID3D11RenderTargetView>& GetBackBufferRTV() const = 0;
 
     virtual HRESULT Present() = 0;
-
-private:
-    BasePresenter(const BasePresenter&) = delete;
-    BasePresenter& operator= (const BasePresenter&) = delete;
 
 protected:
     ComPtr<ID3D11Device> Device;
