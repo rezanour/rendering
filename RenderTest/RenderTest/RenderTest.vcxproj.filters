@@ -21,10 +21,10 @@
     <ClCompile Include="Precomp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Renderer.cpp">
+    <ClCompile Include="DxgiPresenter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Presenter.cpp">
+    <ClCompile Include="LPFRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -32,10 +32,19 @@
     <ClInclude Include="Precomp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Renderer.h">
+    <ClInclude Include="DxgiPresenter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Presenter.h">
+    <ClInclude Include="LPFRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BasePresenter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderingCommon.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

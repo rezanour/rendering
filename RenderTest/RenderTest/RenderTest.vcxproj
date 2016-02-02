@@ -90,13 +90,16 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Presenter.cpp" />
-    <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="DxgiPresenter.cpp" />
+    <ClCompile Include="LPFRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BasePresenter.h" />
+    <ClInclude Include="BaseRenderer.h" />
     <ClInclude Include="Precomp.h" />
-    <ClInclude Include="Presenter.h" />
-    <ClInclude Include="Renderer.h" />
+    <ClInclude Include="DxgiPresenter.h" />
+    <ClInclude Include="LPFRenderer.h" />
+    <ClInclude Include="RenderingCommon.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
