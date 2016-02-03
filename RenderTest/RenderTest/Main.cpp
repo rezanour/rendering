@@ -7,6 +7,7 @@
 #include "RenderVisual.h"
 #include "VertexBuffer.h"
 #include "VertexFormats.h"
+#include <float.h>
 
 using namespace Microsoft::WRL;
 

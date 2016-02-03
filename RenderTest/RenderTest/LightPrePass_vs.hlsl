@@ -8,12 +8,7 @@ cbuffer LightPrePassVSConstants
     float4x4 WorldToViewToProjection;
 };
 
-LightPrePassVSOutput main(PositionNormalVertex input)
+float4 main(PositionNormalVertex input) : SV_POSITION
 {
-    LightPrePassVSOutput output;
-    output.Position = mul(WorldToViewToProjection, float4(input.Position, 1));
-    // casting to 3x3 only works if LocalToWorld and WorldToView have no nonuniform scaling (or other skew, etc...)
-    output.ViewNormal = mul((float3x3)WorldToView, mul((float3x3)LocalToWorld, input.Normal));
-    output.LinearDepth = output.Position.z / output.Position.w;
-    return output;
+    return float4(1.f, 1.f, 1.f, 1.f);
 }
