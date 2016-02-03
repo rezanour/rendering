@@ -1,5 +1,7 @@
 #pragma once
 
+class Texture2D;
+
 // base class for presenters
 class BasePresenter : NonCopyable
 {
@@ -13,7 +15,7 @@ public:
 
     virtual HRESULT Initialize() = 0;
 
-    virtual const ComPtr<ID3D11RenderTargetView>& GetBackBufferRTV() const = 0;
+    virtual const std::shared_ptr<Texture2D>& GetBackBuffer() const = 0;
 
     virtual HRESULT Present() = 0;
 

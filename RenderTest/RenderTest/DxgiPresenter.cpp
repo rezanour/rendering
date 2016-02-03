@@ -1,5 +1,6 @@
 #include "Precomp.h"
 #include "DxgiPresenter.h"
+#include "Texture.h"
 
 DxgiPresenter::DxgiPresenter(ID3D11Device* device, HWND targetWindow)
     : BasePresenter(device)
@@ -43,13 +44,12 @@ HRESULT DxgiPresenter::Initialize()
         &desc, nullptr, nullptr, &SwapChain);
     CHECKHR(hr);
 
-    hr = SwapChain->GetBuffer(0, IID_PPV_ARGS(&BackBuffer));
+    ComPtr<ID3D11Texture2D> texture;
+    hr = SwapChain->GetBuffer(0, IID_PPV_ARGS(&texture));
     CHECKHR(hr);
 
-    D3D11_RENDER_TARGET_VIEW_DESC rtvd{};
-    rtvd.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-    rtvd.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-    hr = Device->CreateRenderTargetView(BackBuffer.Get(), &rtvd, &BackBufferRTV);
+    BackBuffer = std::make_shared<Texture2D>();
+    hr = BackBuffer->WrapExisting(texture);
     CHECKHR(hr);
 
     return hr;

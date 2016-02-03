@@ -11,9 +11,9 @@ public:
 
     virtual HRESULT Initialize() override;
 
-    virtual const ComPtr<ID3D11RenderTargetView>& GetBackBufferRTV() const override
+    virtual const std::shared_ptr<Texture2D>& GetBackBuffer() const override
     {
-        return BackBufferRTV;
+        return BackBuffer;
     }
 
     virtual HRESULT Present() override;
@@ -25,6 +25,5 @@ private:
 private:
     HWND TargetWindow;
     ComPtr<IDXGISwapChain1> SwapChain;
-    ComPtr<ID3D11Texture2D> BackBuffer;
-    ComPtr<ID3D11RenderTargetView> BackBufferRTV;
+    std::shared_ptr<Texture2D> BackBuffer;
 };

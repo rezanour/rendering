@@ -1,13 +1,12 @@
 #include "Precomp.h"
 #include "DxgiPresenter.h"
 #include "LPFRenderer.h"
-#include "RenderTarget.h"
+#include "Texture.h"
 #include "RenderingCommon.h"
 #include "RenderScene.h"
 #include "RenderVisual.h"
 #include "VertexBuffer.h"
 #include "VertexFormats.h"
-#include <float.h>
 
 using namespace Microsoft::WRL;
 
@@ -22,8 +21,8 @@ static ComPtr<ID3D11Device> Device;
 static ComPtr<ID3D11DeviceContext> Context;
 static std::unique_ptr<BasePresenter> Presenter;
 static std::unique_ptr<BaseRenderer> Renderer;
-static std::shared_ptr<RenderTarget> TheRenderTarget;
 static std::shared_ptr<RenderScene> Scene;
+static RenderTarget BackBufferRT;
 static RenderView View;
 
 static HRESULT AppInitialize(HINSTANCE instance);
@@ -64,7 +63,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
         else
         {
             // Idle
-            hr = Renderer->RenderFrame(TheRenderTarget, View);
+            hr = Renderer->RenderFrame(BackBufferRT, View);
             if (FAILED(hr))
             {
                 assert(false);
@@ -173,10 +172,6 @@ HRESULT GfxInitialize()
     hr = Presenter->Initialize();
     CHECKHR(hr);
 
-    TheRenderTarget = std::make_shared<RenderTarget>();
-    hr = TheRenderTarget->Initialize(Presenter->GetBackBufferRTV().Get());
-    CHECKHR(hr);
-
     Renderer.reset(new LPFRenderer(Device.Get()));
     hr = Renderer->Initialize();
     CHECKHR(hr);
@@ -203,7 +198,12 @@ HRESULT GfxInitialize()
 
     Renderer->SetScene(Scene);
 
-    XMStoreFloat4x4(&View.WorldToView, 
+    BackBufferRT.Texture = Presenter->GetBackBuffer();
+    BackBufferRT.Viewport.Width = static_cast<float>(BackBufferRT.Texture->GetDesc().Width);
+    BackBufferRT.Viewport.Height = static_cast<float>(BackBufferRT.Texture->GetDesc().Height);
+    BackBufferRT.Viewport.MaxDepth = 1.f;
+
+    XMStoreFloat4x4(&View.WorldToView,
         XMMatrixLookAtLH(
             XMVectorSet(0.f, 0.f, -5.f, 1.f),
             XMVectorSet(0.f, 0.f, 0.f, 1.f),
@@ -221,7 +221,7 @@ HRESULT GfxInitialize()
 
 void GfxShutdown()
 {
-    TheRenderTarget = nullptr;
+    BackBufferRT.Texture = nullptr;
     Renderer = nullptr;
     Presenter = nullptr;
     Context = nullptr;

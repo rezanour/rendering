@@ -1,6 +1,6 @@
 #pragma once
 
-class RenderTarget;
+struct RenderTarget;
 class RenderScene;
 struct RenderView;
 
@@ -16,9 +16,12 @@ public:
 
     virtual HRESULT Initialize() = 0;
 
+    virtual bool IsMsaaEnabled() const = 0;
+    virtual bool EnableMsaa(bool enable) = 0;
+
     virtual void SetScene(const std::shared_ptr<RenderScene>& scene) = 0;
 
-    virtual HRESULT RenderFrame(const std::shared_ptr<RenderTarget>& renderTarget, const RenderView& view) = 0;
+    virtual HRESULT RenderFrame(const RenderTarget& renderTarget, const RenderView& view) = 0;
 
 protected:
     ComPtr<ID3D11Device> Device;

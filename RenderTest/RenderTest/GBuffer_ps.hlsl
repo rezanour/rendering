@@ -2,9 +2,13 @@
 
 #include "Common.hlsli"
 
-float4 main(GBufferVSOutput input) : SV_TARGET
+void main(
+    GBufferVSOutput input,
+    out float4 Normal : SV_TARGET0,
+    out float LinearDepth : SV_TARGET1)
 {
-    // TODO: store normal in x & y (since view normal, we can easily recompute z later... BUT requires sqrt so maybe sucks!)
-    // TODO: quantize linear depth to 16 bits and pack into z and w channels
-    return float4(1.f, 1.f, 1.f, 1.f);
+    // compress from [-1, 1] range to [0, 1] range
+    Normal.xyz = input.ViewNormal * 0.5f + 0.5f;
+    Normal.w = 0.f;
+    LinearDepth = input.LinearDepth;
 }

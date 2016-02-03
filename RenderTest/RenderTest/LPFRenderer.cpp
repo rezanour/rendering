@@ -1,6 +1,6 @@
 #include "Precomp.h"
 #include "LPFRenderer.h"
-#include "RenderTarget.h"
+#include "Texture.h"
 #include "RenderingCommon.h"
 
 LPFRenderer::LPFRenderer(ID3D11Device* device)
@@ -19,7 +19,7 @@ HRESULT LPFRenderer::Initialize()
     return S_OK;
 }
 
-HRESULT LPFRenderer::RenderFrame(const std::shared_ptr<RenderTarget>& renderTarget, const RenderView& view)
+HRESULT LPFRenderer::RenderFrame(const RenderTarget& renderTarget, const RenderView& view)
 {
     HRESULT hr = S_OK;
 
@@ -27,40 +27,45 @@ HRESULT LPFRenderer::RenderFrame(const std::shared_ptr<RenderTarget>& renderTarg
 
     if (MsaaEnabled)
     {
-        hr = EnsureMsaaRenderTarget(renderTarget);
+        hr = EnsureMsaaRenderTarget(renderTarget.Texture);
         CHECKHR(hr);
 
-        MsaaRenderTarget->SetViewport(renderTarget->GetViewport());
-        CurrentRenderTarget = MsaaRenderTarget;
+        MsaaRenderTarget.Viewport = renderTarget.Viewport;
+        CurrentRenderTarget = &MsaaRenderTarget;
+        CurrentDepthBuffer = MsaaDepthBuffer;
     }
     else
     {
-        CurrentRenderTarget = renderTarget;
+        hr = EnsureDepthBuffer(renderTarget.Texture);
+        CHECKHR(hr);
+
+        CurrentRenderTarget = &renderTarget;
+        CurrentDepthBuffer = DepthBuffer;
     }
 
     static const float clearColor[] = { 0.f, 0.f, 0.5f, 1.f };
-    Context->ClearRenderTargetView(CurrentRenderTarget->GetRTV().Get(), clearColor);
-    Context->OMSetRenderTargets(1, CurrentRenderTarget->GetRTV().GetAddressOf(), nullptr);
-    Context->RSSetViewports(1, &CurrentRenderTarget->GetViewport());
+    Context->ClearRenderTargetView(CurrentRenderTarget->Texture->GetRTV().Get(), clearColor);
+    Context->OMSetRenderTargets(1, CurrentRenderTarget->Texture->GetRTV().GetAddressOf(), CurrentDepthBuffer->GetDSV().Get());
+    Context->RSSetViewports(1, &CurrentRenderTarget->Viewport);
 
     // TODO: Render scene
 
     if (MsaaEnabled)
     {
-        Context->ResolveSubresource(renderTarget->GetTexture().Get(), 0, MsaaRenderTarget->GetTexture().Get(), 0, renderTarget->GetDesc().Format);
+        Context->ResolveSubresource(renderTarget.Texture->GetTexture().Get(), 0, MsaaRenderTarget.Texture->GetTexture().Get(), 0, renderTarget.Texture->GetDesc().Format);
     }
 
     return S_OK;
 }
 
-HRESULT LPFRenderer::EnsureMsaaRenderTarget(const std::shared_ptr<RenderTarget>& finalRenderTarget)
+HRESULT LPFRenderer::EnsureMsaaRenderTarget(const std::shared_ptr<Texture2D>& resolveTarget)
 {
     bool needToCreate = true;
-    if (MsaaRenderTarget != nullptr)
+    if (MsaaRenderTarget.Texture != nullptr)
     {
-        if (MsaaRenderTarget->GetDesc().Width == finalRenderTarget->GetDesc().Width &&
-            MsaaRenderTarget->GetDesc().Height == finalRenderTarget->GetDesc().Height &&
-            MsaaRenderTarget->GetDesc().Format == finalRenderTarget->GetDesc().Format)
+        if (MsaaRenderTarget.Texture->GetDesc().Width == resolveTarget->GetDesc().Width &&
+            MsaaRenderTarget.Texture->GetDesc().Height == resolveTarget->GetDesc().Height &&
+            MsaaRenderTarget.Texture->GetDesc().Format == resolveTarget->GetDesc().Format)
         {
             needToCreate = false;
         }
@@ -71,11 +76,51 @@ HRESULT LPFRenderer::EnsureMsaaRenderTarget(const std::shared_ptr<RenderTarget>&
         return S_OK;
     }
 
-    D3D11_TEXTURE2D_DESC desc = finalRenderTarget->GetDesc();
+    MsaaRenderTarget.Texture = nullptr;
+    MsaaDepthBuffer = nullptr;
+
+    D3D11_TEXTURE2D_DESC desc = resolveTarget->GetDesc();
     desc.SampleDesc.Count = 4;
 
-    MsaaRenderTarget = std::make_shared<RenderTarget>();
-    HRESULT hr = MsaaRenderTarget->Initialize(Device.Get(), desc);
+    MsaaRenderTarget.Texture = std::make_shared<Texture2D>();
+    HRESULT hr = MsaaRenderTarget.Texture->Initialize(Device, desc);
+    CHECKHR(hr);
+
+    desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    desc.Format = DXGI_FORMAT_D32_FLOAT;
+
+    MsaaDepthBuffer = std::make_shared<Texture2D>();
+    hr = MsaaDepthBuffer->Initialize(Device, desc);
+    CHECKHR(hr);
+
+    return hr;
+}
+
+HRESULT LPFRenderer::EnsureDepthBuffer(const std::shared_ptr<Texture2D>& renderTarget)
+{
+    bool needToCreate = true;
+    if (DepthBuffer != nullptr)
+    {
+        if (DepthBuffer->GetDesc().Width == renderTarget->GetDesc().Width &&
+            DepthBuffer->GetDesc().Height == renderTarget->GetDesc().Height)
+        {
+            needToCreate = false;
+        }
+    }
+
+    if (!needToCreate)
+    {
+        return S_OK;
+    }
+
+    DepthBuffer = nullptr;
+
+    D3D11_TEXTURE2D_DESC desc = renderTarget->GetDesc();
+    desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    desc.Format = DXGI_FORMAT_D32_FLOAT;
+
+    DepthBuffer = std::make_shared<Texture2D>();
+    HRESULT hr = DepthBuffer->Initialize(Device, desc);
     CHECKHR(hr);
 
     return hr;
