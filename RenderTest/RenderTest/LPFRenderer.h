@@ -11,6 +11,11 @@ public:
 
     virtual HRESULT Initialize() override;
 
+    virtual void SetScene(const std::shared_ptr<RenderScene>& scene) override
+    {
+        Scene = scene;
+    }
+
     virtual HRESULT RenderFrame(const std::shared_ptr<RenderTarget>& renderTarget, const RenderView& view) override;
 
 private:
@@ -22,4 +27,6 @@ private:
     bool MsaaEnabled;
     std::shared_ptr<RenderTarget> MsaaRenderTarget;
     std::shared_ptr<RenderTarget> CurrentRenderTarget;
+
+    std::shared_ptr<RenderScene> Scene;
 };

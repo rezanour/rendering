@@ -1,6 +1,7 @@
 #pragma once
 
 class RenderTarget;
+class RenderScene;
 struct RenderView;
 
 class BaseRenderer : NonCopyable
@@ -14,6 +15,8 @@ public:
     {}
 
     virtual HRESULT Initialize() = 0;
+
+    virtual void SetScene(const std::shared_ptr<RenderScene>& scene) = 0;
 
     virtual HRESULT RenderFrame(const std::shared_ptr<RenderTarget>& renderTarget, const RenderView& view) = 0;
 

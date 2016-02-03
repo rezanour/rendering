@@ -3,6 +3,10 @@
 #include "LPFRenderer.h"
 #include "RenderTarget.h"
 #include "RenderingCommon.h"
+#include "RenderScene.h"
+#include "RenderVisual.h"
+#include "VertexBuffer.h"
+#include "VertexFormats.h"
 
 using namespace Microsoft::WRL;
 
@@ -15,9 +19,11 @@ static ComPtr<IDXGIFactory2> Factory;
 static ComPtr<IDXGIAdapter> Adapter;
 static ComPtr<ID3D11Device> Device;
 static ComPtr<ID3D11DeviceContext> Context;
-static std::shared_ptr<RenderTarget> TheRenderTarget;
 static std::unique_ptr<BasePresenter> Presenter;
 static std::unique_ptr<BaseRenderer> Renderer;
+static std::shared_ptr<RenderTarget> TheRenderTarget;
+static std::shared_ptr<RenderScene> Scene;
+static RenderView View;
 
 static HRESULT AppInitialize(HINSTANCE instance);
 static LRESULT CALLBACK AppWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -57,9 +63,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
         else
         {
             // Idle
-            RenderView view{};
-
-            hr = Renderer->RenderFrame(TheRenderTarget, view);
+            hr = Renderer->RenderFrame(TheRenderTarget, View);
             if (FAILED(hr))
             {
                 assert(false);
@@ -175,6 +179,41 @@ HRESULT GfxInitialize()
     Renderer.reset(new LPFRenderer(Device.Get()));
     hr = Renderer->Initialize();
     CHECKHR(hr);
+
+    Scene = std::make_shared<RenderScene>();
+
+    PositionNormalVertex vertices[3]{};
+    vertices[0].Position = XMFLOAT3(-1.f, 0.f, 0.f);
+    vertices[1].Position = XMFLOAT3(0.f, 2.f, 0.f);
+    vertices[2].Position = XMFLOAT3(1.f, 0.f, 0.f);
+    vertices[0].Normal = XMFLOAT3(0.f, 0.f, -1.f);
+    vertices[1].Normal = XMFLOAT3(0.f, 0.f, -1.f);
+    vertices[2].Normal = XMFLOAT3(0.f, 0.f, -1.f);
+
+    std::shared_ptr<VertexBuffer> vb = std::make_shared<VertexBuffer>();
+    hr = vb->Initialize(Device.Get(), VertexFormat::PositionNormal, vertices, sizeof(vertices));
+    CHECKHR(hr);
+
+    std::shared_ptr<RenderVisual> visual = std::make_shared<RenderVisual>();
+    hr = visual->Initialize(vb);
+    CHECKHR(hr);
+
+    Scene->AddVisual(visual);
+
+    Renderer->SetScene(Scene);
+
+    XMStoreFloat4x4(&View.WorldToView, 
+        XMMatrixLookAtLH(
+            XMVectorSet(0.f, 0.f, -5.f, 1.f),
+            XMVectorSet(0.f, 0.f, 0.f, 1.f),
+            XMVectorSet(0.f, 1.f, 0.f, 0.f)));
+
+    XMStoreFloat4x4(&View.ViewToProjection,
+        XMMatrixPerspectiveFovLH(
+            XMConvertToRadians(60.f),
+            ClientWidth / (float)ClientHeight,
+            0.1f,
+            100.f));
 
     return hr;
 }

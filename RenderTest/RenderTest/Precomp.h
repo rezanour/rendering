@@ -15,6 +15,7 @@ using namespace DirectX;
 #include <assert.h>
 
 #include <memory>
+#include <vector>
 
 class NonCopyable
 {
