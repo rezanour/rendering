@@ -22,6 +22,7 @@ static ComPtr<ID3D11DeviceContext> Context;
 static std::unique_ptr<BasePresenter> Presenter;
 static std::unique_ptr<BaseRenderer> Renderer;
 static std::shared_ptr<RenderScene> Scene;
+static std::shared_ptr<RenderVisual> Visual;
 static RenderTarget BackBufferRT;
 static RenderView View;
 
@@ -63,6 +64,12 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
         else
         {
             // Idle
+            XMFLOAT4 orientation = Visual->GetOrientation();
+            XMVECTOR rotation = XMQuaternionRotationAxis(XMVectorSet(0, 1, 0, 0), XMConvertToRadians(1.f));
+            XMStoreFloat4(&orientation, XMQuaternionNormalize(XMQuaternionMultiply(XMLoadFloat4(&orientation), rotation)));
+            Visual->SetOrientation(orientation);
+
+
             hr = Renderer->RenderFrame(BackBufferRT, View);
             if (FAILED(hr))
             {
@@ -190,11 +197,11 @@ HRESULT GfxInitialize()
     hr = vb->Initialize(Device.Get(), VertexFormat::PositionNormal, vertices, sizeof(vertices));
     CHECKHR(hr);
 
-    std::shared_ptr<RenderVisual> visual = std::make_shared<RenderVisual>();
-    hr = visual->Initialize(vb);
+    Visual = std::make_shared<RenderVisual>();
+    hr = Visual->Initialize(vb);
     CHECKHR(hr);
 
-    Scene->AddVisual(visual);
+    Scene->AddVisual(Visual);
 
     Renderer->SetScene(Scene);
 
@@ -205,8 +212,8 @@ HRESULT GfxInitialize()
 
     XMStoreFloat4x4(&View.WorldToView,
         XMMatrixLookAtLH(
-            XMVectorSet(0.f, 0.f, -5.f, 1.f),
-            XMVectorSet(0.f, 0.f, 0.f, 1.f),
+            XMVectorSet(0.f, 1.f, -3.f, 1.f),
+            XMVectorSet(0.f, 1.f, 0.f, 1.f),
             XMVectorSet(0.f, 1.f, 0.f, 0.f)));
 
     XMStoreFloat4x4(&View.ViewToProjection,

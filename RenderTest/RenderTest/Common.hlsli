@@ -20,6 +20,12 @@ struct GBufferVSOutput
     float LinearDepth : TEXCOORD;
 };
 
+struct FinalPassVSOutput
+{
+    float4 Position : SV_POSITION;
+    float3 ViewPosition : POSITION;
+};
+
 
 //
 // Utility functions

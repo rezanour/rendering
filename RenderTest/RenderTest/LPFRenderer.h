@@ -3,6 +3,8 @@
 #include "BaseRenderer.h"
 #include "RenderingCommon.h"
 
+class RenderVisual;
+
 // Light-prepass forward renderer
 class LPFRenderer : public BaseRenderer
 {
@@ -12,17 +14,6 @@ public:
 
     virtual HRESULT Initialize() override;
 
-    virtual bool IsMsaaEnabled() const override
-    {
-        return MsaaEnabled;
-    }
-
-    virtual bool EnableMsaa(bool enable) override
-    {
-        MsaaEnabled = enable;
-        return true;
-    }
-
     virtual void SetScene(const std::shared_ptr<RenderScene>& scene) override
     {
         Scene = scene;
@@ -31,18 +22,43 @@ public:
     virtual HRESULT RenderFrame(const RenderTarget& renderTarget, const RenderView& view) override;
 
 private:
-    HRESULT EnsureMsaaRenderTarget(const std::shared_ptr<Texture2D>& resolveTarget);
-    HRESULT EnsureDepthBuffer(const std::shared_ptr<Texture2D>& renderTarget);
+    void RenderGBuffer(const RenderView& view);
+    void RenderLights(const RenderView& view);
+    void RenderFinal(const RenderView& view, const RenderTarget& renderTarget);
 
 private:
     ComPtr<ID3D11DeviceContext> Context;
     std::shared_ptr<RenderScene> Scene;
 
-    bool MsaaEnabled;
-    RenderTarget MsaaRenderTarget;
-    std::shared_ptr<Texture2D> MsaaDepthBuffer;
-    std::shared_ptr<Texture2D> DepthBuffer;
+    std::vector<std::shared_ptr<RenderVisual>> Visuals;
+    D3D11_VIEWPORT Viewport{};
 
-    const RenderTarget* CurrentRenderTarget;
-    std::shared_ptr<Texture2D> CurrentDepthBuffer;
+    ComPtr<ID3D11DepthStencilState> DepthWriteState;
+    ComPtr<ID3D11DepthStencilState> DepthReadState;
+
+    // GBuffer pass
+    struct GBufferVSConstants
+    {
+        XMFLOAT4X4 LocalToView;   // local -> world -> View
+        XMFLOAT4X4 LocalToProjection; // local -> world -> view -> projection
+    };
+
+    ComPtr<ID3D11InputLayout> GBufferIL;
+    ComPtr<ID3D11Buffer> GBufferVSCB;
+    ComPtr<ID3D11VertexShader> GBufferVS;
+    ComPtr<ID3D11PixelShader> GBufferPS;
+    std::shared_ptr<Texture2D> GBufferViewNormalsRT;
+    std::shared_ptr<Texture2D> GBufferLinearDepthRT;
+    std::shared_ptr<Texture2D> GBufferDepthBuffer;
+
+    // Light pass
+    ComPtr<ID3D11InputLayout> LightIL;
+    ComPtr<ID3D11VertexShader> LightVS;
+    ComPtr<ID3D11PixelShader> LightPS;
+    RenderTarget LightPrePassRT;
+
+    // Final pass (TODO: should really be per-object materials)
+    ComPtr<ID3D11InputLayout> FinalIL;
+    ComPtr<ID3D11VertexShader> FinalVS;
+    ComPtr<ID3D11PixelShader> FinalPS;
 };

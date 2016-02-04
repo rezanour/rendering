@@ -10,6 +10,11 @@ public:
 
     HRESULT Initialize(const std::shared_ptr<VertexBuffer>& vertexBuffer);
 
+    const std::shared_ptr<VertexBuffer>& GetVB() const
+    {
+        return VB;
+    }
+
     const XMFLOAT3& GetPosition() const
     {
         return Position;
