@@ -80,6 +80,12 @@ HRESULT LPFRenderer::Initialize()
     hr = Device->CreateBuffer(&bd, nullptr, &DLightVSCB);
     CHECKHR(hr);
 
+    bd.ByteWidth = sizeof(DLightPSConstants);
+    bd.StructureByteStride = bd.ByteWidth;
+
+    hr = Device->CreateBuffer(&bd, nullptr, &DLightPSCB);
+    CHECKHR(hr);
+
     D3D11_TEXTURE2D_DESC desc{};
     desc.ArraySize = 1;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
@@ -224,9 +230,12 @@ void LPFRenderer::RenderLights(const RenderView& view)
 
     Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     Context->IASetInputLayout(DLightIL.Get());
-    Context->VSSetConstantBuffers(0, 1, DLightVSCB.GetAddressOf());
+
     Context->VSSetShader(DLightVS.Get(), nullptr, 0);
+    Context->VSSetConstantBuffers(0, 1, DLightVSCB.GetAddressOf());
+
     Context->PSSetShader(DLightPS.Get(), nullptr, 0);
+    Context->PSSetConstantBuffers(0, 1, DLightPSCB.GetAddressOf());
 
     ID3D11ShaderResourceView* srvs[]{ GBufferViewNormalsRT->GetSRV().Get(), GBufferLinearDepthRT->GetSRV().Get() };
     Context->PSSetShaderResources(0, _countof(srvs), srvs);
@@ -242,9 +251,23 @@ void LPFRenderer::RenderLights(const RenderView& view)
         assert(false);
         return;
     }
-    DLightVSConstants* constants = (DLightVSConstants*)mapped.pData;
-    constants->ClipDistance = 100;
+    DLightVSConstants* vsConstants = (DLightVSConstants*)mapped.pData;
+    vsConstants->ClipDistance = 100;
     Context->Unmap(DLightVSCB.Get(), 0);
+
+    hr = Context->Map(DLightPSCB.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+    if (FAILED(hr))
+    {
+        assert(false);
+        return;
+    }
+    DLightPSConstants* psConstants = (DLightPSConstants*)mapped.pData;
+    psConstants->NumLights = 2;
+    psConstants->Lights[0].Color = XMFLOAT3(0.f, 0.f, 1.f);
+    XMStoreFloat3(&psConstants->Lights[0].Direction, XMVector3Normalize(XMVectorSet(-1, 1, -1, 0)));
+    psConstants->Lights[1].Color = XMFLOAT3(1.f, 0.f, 0.f);
+    XMStoreFloat3(&psConstants->Lights[1].Direction, XMVector3Normalize(XMVectorSet(1, 1, -1, 0)));
+    Context->Unmap(DLightPSCB.Get(), 0);
 
     Context->Draw(QuadVB->GetVertexCount(), QuadVB->GetBaseVertex());
 }
@@ -267,7 +290,7 @@ void LPFRenderer::RenderFinal(const RenderView& view, const RenderTarget& render
     Context->VSSetShader(FinalVS.Get(), nullptr, 0);
     Context->PSSetShader(FinalPS.Get(), nullptr, 0);
 
-    Context->PSSetShaderResources(0, 1, GBufferViewNormalsRT->GetSRV().GetAddressOf());
+    Context->PSSetShaderResources(0, 1, LightRT->GetSRV().GetAddressOf());
 
     XMMATRIX worldToProjection = XMMatrixMultiply(XMLoadFloat4x4(&view.WorldToView), XMLoadFloat4x4(&view.ViewToProjection));
 

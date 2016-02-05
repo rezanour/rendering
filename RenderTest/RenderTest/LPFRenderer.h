@@ -63,10 +63,27 @@ private:
         XMFLOAT3 Padding;
     };
 
+    static const uint32_t MaxDlightsPerPass = 8;
+    struct DLight
+    {
+        XMFLOAT3 Direction;
+        float Pad0;
+        XMFLOAT3 Color;
+        float Pad1;
+    };
+
+    struct DLightPSConstants
+    {
+        DLight Lights[MaxDlightsPerPass];
+        uint32_t NumLights;
+        XMFLOAT3 Pad0;
+    };
+
     ComPtr<ID3D11InputLayout> DLightIL;
     ComPtr<ID3D11VertexShader> DLightVS;
     ComPtr<ID3D11PixelShader> DLightPS;
     ComPtr<ID3D11Buffer> DLightVSCB;
+    ComPtr<ID3D11Buffer> DLightPSCB;
     std::shared_ptr<Texture2D> LightRT;
 
     // Final pass (TODO: should really be per-object materials)

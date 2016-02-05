@@ -165,15 +165,12 @@ static void AddQuad(PositionNormalVertex* verts, XMVECTOR normal, XMVECTOR up, f
     height *= 0.5f;
 
     XMVECTOR right = XMVector3Cross(normal, up);
-    XMFLOAT3 ul, lr;
-    XMStoreFloat3(&ul, right * -width + up * height + normal * d);
-    XMStoreFloat3(&lr, right * width + up * -height + normal * d);
-    verts[0].Position = ul;
-    verts[1].Position = XMFLOAT3(lr.x, ul.y, ul.z);
-    verts[2].Position = lr;
-    verts[3].Position = ul;
-    verts[4].Position = lr;
-    verts[5].Position = XMFLOAT3(ul.x, lr.y, ul.z);
+    XMStoreFloat3(&verts[0].Position, right * -width + up * height + normal * d);
+    XMStoreFloat3(&verts[1].Position, right * width + up * height + normal * d);
+    XMStoreFloat3(&verts[2].Position, right * width + up * -height + normal * d);
+    verts[3] = verts[0];
+    verts[4] = verts[2];
+    XMStoreFloat3(&verts[5].Position, right * -width + up * -height + normal * d);
 }
 
 HRESULT GfxInitialize()
@@ -237,7 +234,7 @@ HRESULT GfxInitialize()
     XMStoreFloat4x4(&View.WorldToView,
         XMMatrixLookAtLH(
             XMVectorSet(0.f, 1.f, -3.f, 1.f),
-            XMVectorSet(0.f, 1.f, 0.f, 1.f),
+            XMVectorSet(0.f, 0.5f, 0.f, 1.f),
             XMVectorSet(0.f, 1.f, 0.f, 0.f)));
 
     XMStoreFloat4x4(&View.ViewToProjection,
@@ -245,7 +242,7 @@ HRESULT GfxInitialize()
             XMConvertToRadians(60.f),
             ClientWidth / (float)ClientHeight,
             0.1f,
-            100.f));
+            10.f));
 
     return hr;
 }
