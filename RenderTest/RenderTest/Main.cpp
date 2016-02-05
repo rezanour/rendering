@@ -152,6 +152,30 @@ void AppShutdown()
     }
 }
 
+static void AddQuad(PositionNormalVertex* verts, XMVECTOR normal, XMVECTOR up, float d, float width, float height)
+{
+    XMStoreFloat3(&verts[0].Normal, normal);
+    XMStoreFloat3(&verts[1].Normal, normal);
+    XMStoreFloat3(&verts[2].Normal, normal);
+    XMStoreFloat3(&verts[3].Normal, normal);
+    XMStoreFloat3(&verts[4].Normal, normal);
+    XMStoreFloat3(&verts[5].Normal, normal);
+
+    width *= 0.5f;
+    height *= 0.5f;
+
+    XMVECTOR right = XMVector3Cross(normal, up);
+    XMFLOAT3 ul, lr;
+    XMStoreFloat3(&ul, right * -width + up * height + normal * d);
+    XMStoreFloat3(&lr, right * width + up * -height + normal * d);
+    verts[0].Position = ul;
+    verts[1].Position = XMFLOAT3(lr.x, ul.y, ul.z);
+    verts[2].Position = lr;
+    verts[3].Position = ul;
+    verts[4].Position = lr;
+    verts[5].Position = XMFLOAT3(ul.x, lr.y, ul.z);
+}
+
 HRESULT GfxInitialize()
 {
     UINT dxgiFlags = 0;
@@ -185,13 +209,13 @@ HRESULT GfxInitialize()
 
     Scene = std::make_shared<RenderScene>();
 
-    PositionNormalVertex vertices[3]{};
-    vertices[0].Position = XMFLOAT3(-1.f, 0.f, 0.f);
-    vertices[1].Position = XMFLOAT3(0.f, 2.f, 0.f);
-    vertices[2].Position = XMFLOAT3(1.f, 0.f, 0.f);
-    vertices[0].Normal = XMFLOAT3(0.f, 0.f, -1.f);
-    vertices[1].Normal = XMFLOAT3(0.f, 0.f, -1.f);
-    vertices[2].Normal = XMFLOAT3(0.f, 0.f, -1.f);
+    PositionNormalVertex vertices[36]{};
+    AddQuad(&vertices[0], XMVectorSet(0, 0, -1, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
+    AddQuad(&vertices[6], XMVectorSet(0, 0, 1, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
+    AddQuad(&vertices[12], XMVectorSet(1, 0, 0, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
+    AddQuad(&vertices[18], XMVectorSet(-1, 0, 0, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
+    AddQuad(&vertices[24], XMVectorSet(0, 1, 0, 0), XMVectorSet(0, 0, 1, 0), 0.5f, 1.f, 1.f);
+    AddQuad(&vertices[30], XMVectorSet(0, -1, 0, 0), XMVectorSet(0, 0, -1, 0), 0.5f, 1.f, 1.f);
 
     std::shared_ptr<VertexBuffer> vb = std::make_shared<VertexBuffer>();
     hr = vb->Initialize(Device, VertexFormat::PositionNormal, vertices, sizeof(vertices));

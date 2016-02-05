@@ -267,7 +267,7 @@ void LPFRenderer::RenderFinal(const RenderView& view, const RenderTarget& render
     Context->VSSetShader(FinalVS.Get(), nullptr, 0);
     Context->PSSetShader(FinalPS.Get(), nullptr, 0);
 
-    Context->PSSetShaderResources(0, 1, LightRT->GetSRV().GetAddressOf());
+    Context->PSSetShaderResources(0, 1, GBufferViewNormalsRT->GetSRV().GetAddressOf());
 
     XMMATRIX worldToProjection = XMMatrixMultiply(XMLoadFloat4x4(&view.WorldToView), XMLoadFloat4x4(&view.ViewToProjection));
 
