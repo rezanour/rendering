@@ -3,7 +3,13 @@
 enum class VertexFormat
 {
     Unknown = 0,
+    Position2D,
     PositionNormal,
+};
+
+struct Position2DVertex
+{
+    XMFLOAT2 Position;
 };
 
 struct PositionNormalVertex

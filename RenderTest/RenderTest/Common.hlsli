@@ -2,6 +2,11 @@
 // Input Vertex Types
 //
 
+struct Position2DVertex
+{
+    float2 Position : POSITION;
+};
+
 struct PositionNormalVertex
 {
     float3 Position : POSITION;
@@ -18,6 +23,12 @@ struct GBufferVSOutput
     float4 Position : SV_POSITION;
     float3 ViewNormal : NORMAL;
     float LinearDepth : TEXCOORD;
+};
+
+struct DLightVSOutput
+{
+    float4 Position : SV_POSITION;
+    float3 EyeRay : TEXCOORD;
 };
 
 struct FinalPassVSOutput

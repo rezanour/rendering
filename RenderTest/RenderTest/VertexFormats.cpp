@@ -5,6 +5,9 @@ uint32_t GetVertexStride(VertexFormat format)
 {
     switch (format)
     {
+    case VertexFormat::Position2D:
+        return sizeof(Position2DVertex);
+
     case VertexFormat::PositionNormal:
         return sizeof(PositionNormalVertex);
 
@@ -21,6 +24,9 @@ uint32_t GetVertexPositionOffset(VertexFormat format)
 {
     switch (format)
     {
+    case VertexFormat::Position2D:
+        return FIELD_OFFSET(Position2DVertex, Position);
+
     case VertexFormat::PositionNormal:
         return FIELD_OFFSET(PositionNormalVertex, Position);
 

@@ -8,7 +8,7 @@ public:
     VertexBuffer();
     virtual ~VertexBuffer();
 
-    HRESULT Initialize(ID3D11Device* device, VertexFormat format, const void* data, uint32_t dataBytes);
+    HRESULT Initialize(const ComPtr<ID3D11Device>& device, VertexFormat format, const void* data, uint32_t dataBytes);
 
     VertexFormat GetFormat() const
     {

@@ -4,12 +4,13 @@
 #include "RenderingCommon.h"
 
 class RenderVisual;
+class VertexBuffer;
 
 // Light-prepass forward renderer
 class LPFRenderer : public BaseRenderer
 {
 public:
-    LPFRenderer(ID3D11Device* device);
+    LPFRenderer(const ComPtr<ID3D11Device>& device);
     virtual ~LPFRenderer();
 
     virtual HRESULT Initialize() override;
@@ -22,6 +23,7 @@ public:
     virtual HRESULT RenderFrame(const RenderTarget& renderTarget, const RenderView& view) override;
 
 private:
+    void UnbindAllRTVsAndSRVs();
     void RenderGBuffer(const RenderView& view);
     void RenderLights(const RenderView& view);
     void RenderFinal(const RenderView& view, const RenderTarget& renderTarget);
@@ -52,10 +54,20 @@ private:
     std::shared_ptr<Texture2D> GBufferDepthBuffer;
 
     // Light pass
-    ComPtr<ID3D11InputLayout> LightIL;
-    ComPtr<ID3D11VertexShader> LightVS;
-    ComPtr<ID3D11PixelShader> LightPS;
-    RenderTarget LightPrePassRT;
+
+    std::shared_ptr<VertexBuffer> QuadVB;
+
+    struct DLightVSConstants
+    {
+        float ClipDistance;
+        XMFLOAT3 Padding;
+    };
+
+    ComPtr<ID3D11InputLayout> DLightIL;
+    ComPtr<ID3D11VertexShader> DLightVS;
+    ComPtr<ID3D11PixelShader> DLightPS;
+    ComPtr<ID3D11Buffer> DLightVSCB;
+    std::shared_ptr<Texture2D> LightRT;
 
     // Final pass (TODO: should really be per-object materials)
     ComPtr<ID3D11InputLayout> FinalIL;

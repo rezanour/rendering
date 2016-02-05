@@ -175,11 +175,11 @@ HRESULT GfxInitialize()
         d3dFlags, &featureLevel, 1, D3D11_SDK_VERSION, &Device, nullptr, &Context);
     CHECKHR(hr);
 
-    Presenter.reset(new DxgiPresenter(Device.Get(), AppWindow));
+    Presenter.reset(new DxgiPresenter(Device, AppWindow));
     hr = Presenter->Initialize();
     CHECKHR(hr);
 
-    Renderer.reset(new LPFRenderer(Device.Get()));
+    Renderer.reset(new LPFRenderer(Device));
     hr = Renderer->Initialize();
     CHECKHR(hr);
 
@@ -194,7 +194,7 @@ HRESULT GfxInitialize()
     vertices[2].Normal = XMFLOAT3(0.f, 0.f, -1.f);
 
     std::shared_ptr<VertexBuffer> vb = std::make_shared<VertexBuffer>();
-    hr = vb->Initialize(Device.Get(), VertexFormat::PositionNormal, vertices, sizeof(vertices));
+    hr = vb->Initialize(Device, VertexFormat::PositionNormal, vertices, sizeof(vertices));
     CHECKHR(hr);
 
     Visual = std::make_shared<RenderVisual>();

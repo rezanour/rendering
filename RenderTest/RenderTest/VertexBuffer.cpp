@@ -16,7 +16,7 @@ VertexBuffer::~VertexBuffer()
 {
 }
 
-HRESULT VertexBuffer::Initialize(ID3D11Device* device, VertexFormat format, const void* data, uint32_t dataBytes)
+HRESULT VertexBuffer::Initialize(const ComPtr<ID3D11Device>& device, VertexFormat format, const void* data, uint32_t dataBytes)
 {
     VB = nullptr;
 

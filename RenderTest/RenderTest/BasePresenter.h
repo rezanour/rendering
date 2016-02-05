@@ -6,7 +6,7 @@ class Texture2D;
 class BasePresenter : NonCopyable
 {
 public:
-    BasePresenter(ID3D11Device* device)
+    BasePresenter(const ComPtr<ID3D11Device>& device)
         : Device(device)
     {}
 

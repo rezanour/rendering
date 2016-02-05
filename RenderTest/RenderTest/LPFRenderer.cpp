@@ -5,14 +5,17 @@
 #include "RenderScene.h"
 #include "RenderVisual.h"
 #include "VertexBuffer.h"
+#include "VertexFormats.h"
 
 // shaders
 #include "GBuffer_vs.h"
 #include "GBuffer_ps.h"
+#include "DirectionalLight_vs.h"
+#include "DirectionalLight_ps.h"
 #include "FinalPass_vs.h"
 #include "FinalPass_ps.h"
 
-LPFRenderer::LPFRenderer(ID3D11Device* device)
+LPFRenderer::LPFRenderer(const ComPtr<ID3D11Device>& device)
     : BaseRenderer(device)
 {
     device->GetImmediateContext(&Context);
@@ -24,6 +27,7 @@ LPFRenderer::~LPFRenderer()
 
 HRESULT LPFRenderer::Initialize()
 {
+    // Input layouts
     D3D11_INPUT_ELEMENT_DESC gbufferInputElems[2]{};
     gbufferInputElems[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
     gbufferInputElems[0].SemanticName = "POSITION";
@@ -34,10 +38,24 @@ HRESULT LPFRenderer::Initialize()
     HRESULT hr = Device->CreateInputLayout(gbufferInputElems, _countof(gbufferInputElems), GBuffer_vs, sizeof(GBuffer_vs), &GBufferIL);
     CHECKHR(hr);
 
+    D3D11_INPUT_ELEMENT_DESC dlightInputElems[1]{};
+    dlightInputElems[0].Format = DXGI_FORMAT_R32G32_FLOAT;
+    dlightInputElems[0].SemanticName = "POSITION";
+
+    hr = Device->CreateInputLayout(dlightInputElems, _countof(dlightInputElems), DirectionalLight_vs, sizeof(DirectionalLight_vs), &DLightIL);
+    CHECKHR(hr);
+
+    // Shaders
     hr = Device->CreateVertexShader(GBuffer_vs, sizeof(GBuffer_vs), nullptr, &GBufferVS);
     CHECKHR(hr);
 
     hr = Device->CreatePixelShader(GBuffer_ps, sizeof(GBuffer_ps), nullptr, &GBufferPS);
+    CHECKHR(hr);
+
+    hr = Device->CreateVertexShader(DirectionalLight_vs, sizeof(DirectionalLight_vs), nullptr, &DLightVS);
+    CHECKHR(hr);
+
+    hr = Device->CreatePixelShader(DirectionalLight_ps, sizeof(DirectionalLight_ps), nullptr, &DLightPS);
     CHECKHR(hr);
 
     hr = Device->CreateVertexShader(FinalPass_vs, sizeof(FinalPass_vs), nullptr, &FinalVS);
@@ -56,6 +74,12 @@ HRESULT LPFRenderer::Initialize()
     hr = Device->CreateBuffer(&bd, nullptr, &GBufferVSCB);
     CHECKHR(hr);
 
+    bd.ByteWidth = sizeof(DLightVSConstants);
+    bd.StructureByteStride = bd.ByteWidth;
+
+    hr = Device->CreateBuffer(&bd, nullptr, &DLightVSCB);
+    CHECKHR(hr);
+
     D3D11_TEXTURE2D_DESC desc{};
     desc.ArraySize = 1;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
@@ -72,6 +96,10 @@ HRESULT LPFRenderer::Initialize()
 
     GBufferViewNormalsRT = std::make_shared<Texture2D>();
     hr = GBufferViewNormalsRT->Initialize(Device, desc);
+    CHECKHR(hr);
+
+    LightRT = std::make_shared<Texture2D>();
+    hr = LightRT->Initialize(Device, desc);
     CHECKHR(hr);
 
     desc.Format = DXGI_FORMAT_R32_FLOAT;
@@ -97,6 +125,21 @@ HRESULT LPFRenderer::Initialize()
     hr = Device->CreateDepthStencilState(&dsDesc, &DepthReadState);
     CHECKHR(hr);
 
+    // Quad
+    Position2DVertex verts[]
+    {
+        { XMFLOAT2(-1, 1), },
+        { XMFLOAT2(1, 1), },
+        { XMFLOAT2(1, -1), },
+        { XMFLOAT2(-1, 1), },
+        { XMFLOAT2(1, -1), },
+        { XMFLOAT2(-1, -1), },
+    };
+
+    QuadVB = std::make_shared<VertexBuffer>();
+    hr = QuadVB->Initialize(Device, VertexFormat::Position2D, verts, sizeof(verts));
+    CHECKHR(hr);
+
     return S_OK;
 }
 
@@ -112,8 +155,18 @@ HRESULT LPFRenderer::RenderFrame(const RenderTarget& renderTarget, const RenderV
     return S_OK;
 }
 
+void LPFRenderer::UnbindAllRTVsAndSRVs()
+{
+    ID3D11RenderTargetView* nullRTVs[]{ nullptr, nullptr, nullptr };
+    ID3D11ShaderResourceView* nullSRVs[]{ nullptr, nullptr, nullptr };
+    Context->OMSetRenderTargets(_countof(nullRTVs), nullRTVs, nullptr);
+    Context->PSSetShaderResources(0, _countof(nullSRVs), nullSRVs);
+}
+
 void LPFRenderer::RenderGBuffer(const RenderView& view)
 {
+    UnbindAllRTVsAndSRVs();
+
     static const float ViewNormalsClear[] = { 0.f, 0.f, 0.f, 1.f };
     static const float LinearDepthClear[] = { 1.f, 1.f, 1.f, 1.f };
     Context->ClearRenderTargetView(GBufferViewNormalsRT->GetRTV().Get(), ViewNormalsClear);
@@ -159,10 +212,47 @@ void LPFRenderer::RenderGBuffer(const RenderView& view)
 void LPFRenderer::RenderLights(const RenderView& view)
 {
     UNREFERENCED_PARAMETER(view);
+
+    UnbindAllRTVsAndSRVs();
+
+    static const float ClearColor[] = { 0.f, 0.f, 0.f, 0.f };
+    Context->ClearRenderTargetView(LightRT->GetRTV().Get(), ClearColor);
+
+    ID3D11RenderTargetView* rtvs[]{ LightRT->GetRTV().Get(), nullptr };
+    Context->OMSetRenderTargets(_countof(rtvs), rtvs, nullptr);
+    Context->RSSetViewports(1, &Viewport);
+
+    Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    Context->IASetInputLayout(DLightIL.Get());
+    Context->VSSetConstantBuffers(0, 1, DLightVSCB.GetAddressOf());
+    Context->VSSetShader(DLightVS.Get(), nullptr, 0);
+    Context->PSSetShader(DLightPS.Get(), nullptr, 0);
+
+    ID3D11ShaderResourceView* srvs[]{ GBufferViewNormalsRT->GetSRV().Get(), GBufferLinearDepthRT->GetSRV().Get() };
+    Context->PSSetShaderResources(0, _countof(srvs), srvs);
+
+    uint32_t stride = QuadVB->GetStride();
+    uint32_t offset = 0;
+    Context->IASetVertexBuffers(0, 1, QuadVB->GetVB().GetAddressOf(), &stride, &offset);
+
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    HRESULT hr = Context->Map(DLightVSCB.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+    if (FAILED(hr))
+    {
+        assert(false);
+        return;
+    }
+    DLightVSConstants* constants = (DLightVSConstants*)mapped.pData;
+    constants->ClipDistance = 100;
+    Context->Unmap(DLightVSCB.Get(), 0);
+
+    Context->Draw(QuadVB->GetVertexCount(), QuadVB->GetBaseVertex());
 }
 
 void LPFRenderer::RenderFinal(const RenderView& view, const RenderTarget& renderTarget)
 {
+    UnbindAllRTVsAndSRVs();
+
     static const float ClearColor[] = { 0.f, 0.f, 0.f, 1.f };
     Context->ClearRenderTargetView(renderTarget.Texture->GetRTV().Get(), ClearColor);
 
@@ -177,7 +267,7 @@ void LPFRenderer::RenderFinal(const RenderView& view, const RenderTarget& render
     Context->VSSetShader(FinalVS.Get(), nullptr, 0);
     Context->PSSetShader(FinalPS.Get(), nullptr, 0);
 
-    Context->PSSetShaderResources(0, 1, GBufferViewNormalsRT->GetSRV().GetAddressOf());
+    Context->PSSetShaderResources(0, 1, LightRT->GetSRV().GetAddressOf());
 
     XMMATRIX worldToProjection = XMMatrixMultiply(XMLoadFloat4x4(&view.WorldToView), XMLoadFloat4x4(&view.ViewToProjection));
 

@@ -2,7 +2,7 @@
 #include "DxgiPresenter.h"
 #include "Texture.h"
 
-DxgiPresenter::DxgiPresenter(ID3D11Device* device, HWND targetWindow)
+DxgiPresenter::DxgiPresenter(const ComPtr<ID3D11Device>& device, HWND targetWindow)
     : BasePresenter(device)
     , TargetWindow(targetWindow)
 {

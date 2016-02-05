@@ -7,7 +7,7 @@ struct RenderView;
 class BaseRenderer : NonCopyable
 {
 public:
-    BaseRenderer(ID3D11Device* device)
+    BaseRenderer(const ComPtr<ID3D11Device>& device)
         : Device(device)
     {}
 

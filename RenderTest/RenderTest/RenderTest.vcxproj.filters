@@ -79,12 +79,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="LightPrePass_vs.hlsl">
-      <Filter>Resource Files</Filter>
-    </FxCompile>
-    <FxCompile Include="LightPrePass_ps.hlsl">
-      <Filter>Resource Files</Filter>
-    </FxCompile>
     <FxCompile Include="GBuffer_vs.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
@@ -95,6 +89,12 @@
       <Filter>Resource Files</Filter>
     </FxCompile>
     <FxCompile Include="FinalPass_ps.hlsl">
+      <Filter>Resource Files</Filter>
+    </FxCompile>
+    <FxCompile Include="DirectionalLight_vs.hlsl">
+      <Filter>Resource Files</Filter>
+    </FxCompile>
+    <FxCompile Include="DirectionalLight_ps.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
   </ItemGroup>
