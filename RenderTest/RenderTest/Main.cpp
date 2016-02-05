@@ -7,6 +7,7 @@
 #include "RenderVisual.h"
 #include "VertexBuffer.h"
 #include "VertexFormats.h"
+#include "AssetLoader.h"
 
 using namespace Microsoft::WRL;
 
@@ -22,6 +23,7 @@ static ComPtr<ID3D11DeviceContext> Context;
 static std::unique_ptr<BasePresenter> Presenter;
 static std::unique_ptr<BaseRenderer> Renderer;
 static std::shared_ptr<RenderScene> Scene;
+static std::shared_ptr<AssetLoader> Assets;
 static std::shared_ptr<RenderVisual> Visual;
 static RenderTarget BackBufferRT;
 static RenderView View;
@@ -205,6 +207,10 @@ HRESULT GfxInitialize()
     CHECKHR(hr);
 
     Scene = std::make_shared<RenderScene>();
+
+    Assets = std::make_shared<AssetLoader>(L"..\\Assets");
+    hr = Assets->LoadModel(L"stmedard_o\\stmedardUobj.obj", &Visual);
+    CHECKHR(hr);
 
     PositionNormalVertex vertices[36]{};
     AddQuad(&vertices[0], XMVectorSet(0, 0, -1, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);

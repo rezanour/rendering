@@ -97,6 +97,7 @@
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AssetLoader.cpp" />
     <ClCompile Include="LPFRenderer.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Precomp.cpp">
@@ -113,6 +114,7 @@
   <ItemGroup>
     <ClInclude Include="BasePresenter.h" />
     <ClInclude Include="BaseRenderer.h" />
+    <ClInclude Include="AssetLoader.h" />
     <ClInclude Include="Precomp.h" />
     <ClInclude Include="DxgiPresenter.h" />
     <ClInclude Include="LPFRenderer.h" />
