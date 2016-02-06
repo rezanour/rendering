@@ -5,11 +5,12 @@ class RenderVisual;
 class AssetLoader : NonCopyable
 {
 public:
-    AssetLoader(const std::wstring& assetRoot);
+    AssetLoader(const ComPtr<ID3D11Device>& device, const std::wstring& assetRoot);
     virtual ~AssetLoader();
 
-    HRESULT LoadModel(const std::wstring& relativePath, std::shared_ptr<RenderVisual>* visual);
+    HRESULT LoadModel(const std::wstring& relativePath, std::vector<std::shared_ptr<RenderVisual>>* visuals);
 
 private:
+    ComPtr<ID3D11Device> Device;
     std::wstring AssetRoot;
 };

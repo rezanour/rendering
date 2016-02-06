@@ -25,6 +25,7 @@ static std::unique_ptr<BaseRenderer> Renderer;
 static std::shared_ptr<RenderScene> Scene;
 static std::shared_ptr<AssetLoader> Assets;
 static std::shared_ptr<RenderVisual> Visual;
+static std::vector<std::shared_ptr<RenderVisual>> Visuals;
 static RenderTarget BackBufferRT;
 static RenderView View;
 
@@ -66,11 +67,10 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
         else
         {
             // Idle
-            XMFLOAT4 orientation = Visual->GetOrientation();
-            XMVECTOR rotation = XMQuaternionRotationAxis(XMVectorSet(0, 1, 0, 0), XMConvertToRadians(1.f));
-            XMStoreFloat4(&orientation, XMQuaternionNormalize(XMQuaternionMultiply(XMLoadFloat4(&orientation), rotation)));
-            Visual->SetOrientation(orientation);
-
+            //XMFLOAT4 orientation = Visual->GetOrientation();
+            //XMVECTOR rotation = XMQuaternionRotationAxis(XMVectorSet(0, 1, 0, 0), XMConvertToRadians(1.f));
+            //XMStoreFloat4(&orientation, XMQuaternionNormalize(XMQuaternionMultiply(XMLoadFloat4(&orientation), rotation)));
+            //Visual->SetOrientation(orientation);
 
             hr = Renderer->RenderFrame(BackBufferRT, View);
             if (FAILED(hr))
@@ -208,27 +208,32 @@ HRESULT GfxInitialize()
 
     Scene = std::make_shared<RenderScene>();
 
-    Assets = std::make_shared<AssetLoader>(L"..\\Assets");
-    hr = Assets->LoadModel(L"stmedard_o\\stmedardUobj.obj", &Visual);
+    Assets = std::make_shared<AssetLoader>(Device, L"..\\ProcessedContent");
+    hr = Assets->LoadModel(L"crytek-sponza\\sponza.model", &Visuals);
     CHECKHR(hr);
 
-    PositionNormalVertex vertices[36]{};
-    AddQuad(&vertices[0], XMVectorSet(0, 0, -1, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
-    AddQuad(&vertices[6], XMVectorSet(0, 0, 1, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
-    AddQuad(&vertices[12], XMVectorSet(1, 0, 0, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
-    AddQuad(&vertices[18], XMVectorSet(-1, 0, 0, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
-    AddQuad(&vertices[24], XMVectorSet(0, 1, 0, 0), XMVectorSet(0, 0, 1, 0), 0.5f, 1.f, 1.f);
-    AddQuad(&vertices[30], XMVectorSet(0, -1, 0, 0), XMVectorSet(0, 0, -1, 0), 0.5f, 1.f, 1.f);
+    for (auto& visual : Visuals)
+    {
+        Scene->AddVisual(visual);
+    }
 
-    std::shared_ptr<VertexBuffer> vb = std::make_shared<VertexBuffer>();
-    hr = vb->Initialize(Device, VertexFormat::PositionNormal, vertices, sizeof(vertices));
-    CHECKHR(hr);
+    //PositionNormalVertex vertices[36]{};
+    //AddQuad(&vertices[0], XMVectorSet(0, 0, -1, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
+    //AddQuad(&vertices[6], XMVectorSet(0, 0, 1, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
+    //AddQuad(&vertices[12], XMVectorSet(1, 0, 0, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
+    //AddQuad(&vertices[18], XMVectorSet(-1, 0, 0, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
+    //AddQuad(&vertices[24], XMVectorSet(0, 1, 0, 0), XMVectorSet(0, 0, 1, 0), 0.5f, 1.f, 1.f);
+    //AddQuad(&vertices[30], XMVectorSet(0, -1, 0, 0), XMVectorSet(0, 0, -1, 0), 0.5f, 1.f, 1.f);
 
-    Visual = std::make_shared<RenderVisual>();
-    hr = Visual->Initialize(vb);
-    CHECKHR(hr);
+    //std::shared_ptr<VertexBuffer> vb = std::make_shared<VertexBuffer>();
+    //hr = vb->Initialize(Device, VertexFormat::PositionNormal, vertices, sizeof(vertices));
+    //CHECKHR(hr);
 
-    Scene->AddVisual(Visual);
+    //Visual = std::make_shared<RenderVisual>();
+    //hr = Visual->Initialize(vb, nullptr);
+    //CHECKHR(hr);
+
+    //Scene->AddVisual(Visual);
 
     Renderer->SetScene(Scene);
 
@@ -238,9 +243,9 @@ HRESULT GfxInitialize()
     BackBufferRT.Viewport.MaxDepth = 1.f;
 
     XMStoreFloat4x4(&View.WorldToView,
-        XMMatrixLookAtLH(
-            XMVectorSet(0.f, 1.f, -3.f, 1.f),
-            XMVectorSet(0.f, 0.5f, 0.f, 1.f),
+        XMMatrixLookToLH(
+            XMVectorSet(0.f, 50.f, 0.f, 1.f),
+            XMVectorSet(-1.f, 0.f, 0.f, 0.f),
             XMVectorSet(0.f, 1.f, 0.f, 0.f)));
 
     XMStoreFloat4x4(&View.ViewToProjection,
@@ -248,13 +253,16 @@ HRESULT GfxInitialize()
             XMConvertToRadians(60.f),
             ClientWidth / (float)ClientHeight,
             0.1f,
-            10.f));
+            10000.f));
 
     return hr;
 }
 
 void GfxShutdown()
 {
+    Visuals.clear();
+    Visual = nullptr;
+    Scene = nullptr;
     BackBufferRT.Texture = nullptr;
     Renderer = nullptr;
     Presenter = nullptr;

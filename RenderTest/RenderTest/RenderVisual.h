@@ -1,6 +1,7 @@
 #pragma once
 
 class VertexBuffer;
+class IndexBuffer;
 
 class RenderVisual : NonCopyable
 {
@@ -8,11 +9,28 @@ public:
     RenderVisual();
     virtual ~RenderVisual();
 
-    HRESULT Initialize(const std::shared_ptr<VertexBuffer>& vertexBuffer);
+    HRESULT Initialize(
+        const std::shared_ptr<VertexBuffer>& vertexBuffer,
+        const std::shared_ptr<IndexBuffer>& indexBuffer, uint32_t baseIndex, uint32_t indexCount);
 
     const std::shared_ptr<VertexBuffer>& GetVB() const
     {
         return VB;
+    }
+
+    const std::shared_ptr<IndexBuffer>& GetIB() const
+    {
+        return IB;
+    }
+
+    uint32_t GetBaseIndex() const
+    {
+        return BaseIndex;
+    }
+
+    uint32_t GetIndexCount() const
+    {
+        return IndexCount;
     }
 
     const XMFLOAT3& GetPosition() const
@@ -46,6 +64,9 @@ public:
 
 private:
     std::shared_ptr<VertexBuffer> VB;
+    std::shared_ptr<IndexBuffer> IB;
+    uint32_t BaseIndex;
+    uint32_t IndexCount;
 
     XMFLOAT3 Position;
     XMFLOAT4 Orientation;

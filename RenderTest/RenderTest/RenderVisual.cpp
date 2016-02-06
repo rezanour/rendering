@@ -1,9 +1,12 @@
 #include "Precomp.h"
 #include "RenderVisual.h"
 #include "VertexBuffer.h"
+#include "IndexBuffer.h"
 
 RenderVisual::RenderVisual()
-    : Position(0.f, 0.f, 0.f)
+    : BaseIndex(0)
+    , IndexCount(0)
+    , Position(0.f, 0.f, 0.f)
     , Orientation(0.f, 0.f, 0.f, 1.f)
     , LocalToWorldDirty(true)
     , WorldBoundsCenterDirty(true)
@@ -14,9 +17,14 @@ RenderVisual::~RenderVisual()
 {
 }
 
-HRESULT RenderVisual::Initialize(const std::shared_ptr<VertexBuffer>& vertexBuffer)
+HRESULT RenderVisual::Initialize(
+    const std::shared_ptr<VertexBuffer>& vertexBuffer,
+    const std::shared_ptr<IndexBuffer>& indexBuffer, uint32_t baseIndex, uint32_t indexCount)
 {
     VB = vertexBuffer;
+    IB = indexBuffer;
+    BaseIndex = baseIndex;
+    IndexCount = indexCount;
     return S_OK;
 }
 

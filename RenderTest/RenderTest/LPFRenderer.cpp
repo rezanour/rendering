@@ -5,6 +5,7 @@
 #include "RenderScene.h"
 #include "RenderVisual.h"
 #include "VertexBuffer.h"
+#include "IndexBuffer.h"
 #include "VertexFormats.h"
 
 // shaders
@@ -198,6 +199,7 @@ void LPFRenderer::RenderGBuffer(const RenderView& view)
         uint32_t stride = vb->GetStride();
         uint32_t offset = 0;
         Context->IASetVertexBuffers(0, 1, vb->GetVB().GetAddressOf(), &stride, &offset);
+        Context->IASetIndexBuffer(visual->GetIB()->GetIB().Get(), DXGI_FORMAT_R32_UINT, 0);
 
         D3D11_MAPPED_SUBRESOURCE mapped{};
         HRESULT hr = Context->Map(GBufferVSCB.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
@@ -211,7 +213,7 @@ void LPFRenderer::RenderGBuffer(const RenderView& view)
         XMStoreFloat4x4(&constants->LocalToProjection, XMMatrixMultiply(XMLoadFloat4x4(&visual->GetLocalToWorld()), worldToProjection));
         Context->Unmap(GBufferVSCB.Get(), 0);
 
-        Context->Draw(vb->GetVertexCount(), vb->GetBaseVertex());
+        Context->DrawIndexed(visual->GetIndexCount(), visual->GetBaseIndex(), vb->GetBaseVertex());
     }
 }
 
@@ -300,6 +302,7 @@ void LPFRenderer::RenderFinal(const RenderView& view, const RenderTarget& render
         uint32_t stride = vb->GetStride();
         uint32_t offset = 0;
         Context->IASetVertexBuffers(0, 1, vb->GetVB().GetAddressOf(), &stride, &offset);
+        Context->IASetIndexBuffer(visual->GetIB()->GetIB().Get(), DXGI_FORMAT_R32_UINT, 0);
 
         D3D11_MAPPED_SUBRESOURCE mapped{};
         HRESULT hr = Context->Map(GBufferVSCB.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
@@ -313,6 +316,6 @@ void LPFRenderer::RenderFinal(const RenderView& view, const RenderTarget& render
         XMStoreFloat4x4(&constants->LocalToProjection, XMMatrixMultiply(XMLoadFloat4x4(&visual->GetLocalToWorld()), worldToProjection));
         Context->Unmap(GBufferVSCB.Get(), 0);
 
-        Context->Draw(vb->GetVertexCount(), vb->GetBaseVertex());
+        Context->DrawIndexed(visual->GetIndexCount(), visual->GetBaseIndex(), vb->GetBaseVertex());
     }
 }
