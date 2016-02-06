@@ -131,7 +131,7 @@ HRESULT AssetLoader::LoadModel(const std::wstring& relativePath, std::vector<std
     CHECKHR(hr);
 
     std::shared_ptr<IndexBuffer> ib = std::make_shared<IndexBuffer>();
-    hr = ib->Initialize(Device, indices.get(), sizeof(uint32_t) * header.NumVertices);
+    hr = ib->Initialize(Device, indices.get(), sizeof(uint32_t) * header.NumIndices);
     CHECKHR(hr);
 
     // Free up memory
@@ -141,8 +141,8 @@ HRESULT AssetLoader::LoadModel(const std::wstring& relativePath, std::vector<std
     // Load objects
     for (int iObj = 0; iObj < (int)header.NumObjects; ++iObj)
     {
-        ModelObject obj;
-        if (!ReadFile(modelFile.Get(), &obj, sizeof(ModelObject), &bytesRead, nullptr))
+        ModelObject obj{};
+        if (!ReadFile(modelFile.Get(), &obj, sizeof(obj), &bytesRead, nullptr))
         {
             assert(false);
             return HRESULT_FROM_WIN32(GetLastError());

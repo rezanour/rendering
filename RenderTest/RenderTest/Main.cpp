@@ -14,6 +14,12 @@ using namespace Microsoft::WRL;
 static const wchar_t AppClassName[] = L"RenderTest";
 static const uint32_t ClientWidth = 1280;
 static const uint32_t ClientHeight = 720;
+static const float Fov = XMConvertToRadians(70.f);
+static const float NearClip = 0.5f;
+static const float FarClip = 10000.f;
+static const float CameraMoveSpeed = 4.f;
+static const float CameraTurnSpeed = 0.025f;
+static const float MouseTurnSpeed = 0.005f;
 
 static HWND AppWindow;
 static ComPtr<IDXGIFactory2> Factory;
@@ -24,7 +30,6 @@ static std::unique_ptr<BasePresenter> Presenter;
 static std::unique_ptr<BaseRenderer> Renderer;
 static std::shared_ptr<RenderScene> Scene;
 static std::shared_ptr<AssetLoader> Assets;
-static std::shared_ptr<RenderVisual> Visual;
 static std::vector<std::shared_ptr<RenderVisual>> Visuals;
 static RenderTarget BackBufferRT;
 static RenderView View;
@@ -56,6 +61,30 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
     ShowWindow(AppWindow, SW_SHOW);
     UpdateWindow(AppWindow);
 
+    // Timing info
+    LARGE_INTEGER lastTime{};
+    LARGE_INTEGER currTime{};
+    LARGE_INTEGER frequency{};
+    QueryPerformanceFrequency(&frequency);
+
+    // TODO: Replace with something better as needed
+
+    // Camera info
+    XMVECTOR position = XMVectorSet(0.f, 10.f, 0.f, 1.f);
+    XMVECTOR forward = XMVectorSet(0.f, 0.f, -1.f, 0.f);
+    XMVECTOR right = XMVectorSet(1.f, 0.f, 0.f, 0.f);
+    XMVECTOR up = XMVectorSet(0.f, 1.f, 0.f, 0.f);
+    float yaw = 0.f;
+    float pitch = 0.f;
+    POINT lastMousePos{};
+    POINT curMousePos{};
+
+    XMMATRIX projection = XMMatrixPerspectiveFovRH(
+        Fov,
+        ClientWidth / (float)ClientHeight,  // Aspect ratio of window client (rendering) area
+        NearClip,
+        FarClip);
+
     MSG msg = {};
     while (msg.message != WM_QUIT)
     {
@@ -66,11 +95,72 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
         }
         else
         {
-            // Idle
-            //XMFLOAT4 orientation = Visual->GetOrientation();
-            //XMVECTOR rotation = XMQuaternionRotationAxis(XMVectorSet(0, 1, 0, 0), XMConvertToRadians(1.f));
-            //XMStoreFloat4(&orientation, XMQuaternionNormalize(XMQuaternionMultiply(XMLoadFloat4(&orientation), rotation)));
-            //Visual->SetOrientation(orientation);
+            // Idle, measure time and produce a frame
+            QueryPerformanceCounter(&currTime);
+            if (lastTime.QuadPart == 0)
+            {
+                lastTime.QuadPart = currTime.QuadPart;
+                continue;
+            }
+
+            // Compute time step from last frame until now
+            double timeStep = (double)(currTime.QuadPart - lastTime.QuadPart) / (double)frequency.QuadPart;
+
+            // Compute fps
+            float frameRate = 1.0f / (float)timeStep;
+            lastTime = currTime;
+
+            UNREFERENCED_PARAMETER(frameRate);
+
+            // Handle input
+            if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+            {
+                // Exit
+                break;
+            }
+
+            XMVECTOR movement = XMVectorZero();
+            if (GetAsyncKeyState('W') & 0x8000)
+            {
+                movement += forward;
+            }
+            if (GetAsyncKeyState('A') & 0x8000)
+            {
+                movement += -right;
+            }
+            if (GetAsyncKeyState('S') & 0x8000)
+            {
+                movement += -forward;
+            }
+            if (GetAsyncKeyState('D') & 0x8000)
+            {
+                movement += right;
+            }
+
+            position += XMVector3Normalize(movement) * CameraMoveSpeed;
+
+            if (GetAsyncKeyState(VK_LEFT) & 0x8000)
+            {
+                yaw -= CameraTurnSpeed;
+            }
+            if (GetAsyncKeyState(VK_RIGHT) & 0x8000)
+            {
+                yaw += CameraTurnSpeed;
+            }
+            if (GetAsyncKeyState(VK_UP) & 0x8000)
+            {
+                pitch -= CameraTurnSpeed;
+            }
+            if (GetAsyncKeyState(VK_DOWN) & 0x8000)
+            {
+                pitch += CameraTurnSpeed;
+            }
+
+            forward = XMVector3TransformNormal(XMVectorSet(0.f, 0.f, 1.f, 0.f), XMMatrixRotationY(yaw));
+            right = XMVector3Cross(XMVectorSet(0.f, 1.f, 0.f, 0.f), forward);
+            up = XMVector3TransformNormal(XMVectorSet(0.f, 1.f, 0.f, 0.f), XMMatrixRotationAxis(right, pitch));
+            forward = XMVector3Cross(right, up);
+            XMStoreFloat4x4(&View.WorldToView, XMMatrixLookToLH(position, forward, up));
 
             hr = Renderer->RenderFrame(BackBufferRT, View);
             if (FAILED(hr))
@@ -132,13 +222,6 @@ LRESULT CALLBACK AppWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
     {
     case WM_CLOSE:
         PostQuitMessage(0);
-        break;
-
-    case WM_KEYDOWN:
-        if (wParam == VK_ESCAPE)
-        {
-            PostQuitMessage(0);
-        }
         break;
     }
 
@@ -217,36 +300,12 @@ HRESULT GfxInitialize()
         Scene->AddVisual(visual);
     }
 
-    //PositionNormalVertex vertices[36]{};
-    //AddQuad(&vertices[0], XMVectorSet(0, 0, -1, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
-    //AddQuad(&vertices[6], XMVectorSet(0, 0, 1, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
-    //AddQuad(&vertices[12], XMVectorSet(1, 0, 0, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
-    //AddQuad(&vertices[18], XMVectorSet(-1, 0, 0, 0), XMVectorSet(0, 1, 0, 0), 0.5f, 1.f, 1.f);
-    //AddQuad(&vertices[24], XMVectorSet(0, 1, 0, 0), XMVectorSet(0, 0, 1, 0), 0.5f, 1.f, 1.f);
-    //AddQuad(&vertices[30], XMVectorSet(0, -1, 0, 0), XMVectorSet(0, 0, -1, 0), 0.5f, 1.f, 1.f);
-
-    //std::shared_ptr<VertexBuffer> vb = std::make_shared<VertexBuffer>();
-    //hr = vb->Initialize(Device, VertexFormat::PositionNormal, vertices, sizeof(vertices));
-    //CHECKHR(hr);
-
-    //Visual = std::make_shared<RenderVisual>();
-    //hr = Visual->Initialize(vb, nullptr);
-    //CHECKHR(hr);
-
-    //Scene->AddVisual(Visual);
-
     Renderer->SetScene(Scene);
 
     BackBufferRT.Texture = Presenter->GetBackBuffer();
     BackBufferRT.Viewport.Width = static_cast<float>(BackBufferRT.Texture->GetDesc().Width);
     BackBufferRT.Viewport.Height = static_cast<float>(BackBufferRT.Texture->GetDesc().Height);
     BackBufferRT.Viewport.MaxDepth = 1.f;
-
-    XMStoreFloat4x4(&View.WorldToView,
-        XMMatrixLookToLH(
-            XMVectorSet(0.f, 50.f, 0.f, 1.f),
-            XMVectorSet(-1.f, 0.f, 0.f, 0.f),
-            XMVectorSet(0.f, 1.f, 0.f, 0.f)));
 
     XMStoreFloat4x4(&View.ViewToProjection,
         XMMatrixPerspectiveFovLH(
@@ -261,7 +320,6 @@ HRESULT GfxInitialize()
 void GfxShutdown()
 {
     Visuals.clear();
-    Visual = nullptr;
     Scene = nullptr;
     BackBufferRT.Texture = nullptr;
     Renderer = nullptr;
