@@ -212,6 +212,12 @@ void ShaderPass::End()
 
 void ShaderPass::BeginGraphics()
 {
+    if (Viewport.Width == 0 || Viewport.Height == 0)
+    {
+        // Reset based on RenderTarget
+        SetViewport(nullptr);
+    }
+
     Context->OMSetRenderTargets(_countof(RenderTargets), RenderTargets, DepthBuffer.Get());
     Context->OMSetDepthStencilState(DepthState.Get(), 0);
     Context->RSSetViewports(1, &Viewport);
