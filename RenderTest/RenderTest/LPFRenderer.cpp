@@ -7,6 +7,7 @@
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
 #include "VertexFormats.h"
+#include "ShaderPass.h"
 
 // shaders
 #include "GBuffer_vs.h"
@@ -30,57 +31,43 @@ LPFRenderer::~LPFRenderer()
 
 HRESULT LPFRenderer::Initialize()
 {
-    // Input layouts
-    D3D11_INPUT_ELEMENT_DESC gbufferInputElems[5]{};
-    gbufferInputElems[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-    gbufferInputElems[0].SemanticName = "POSITION";
-    gbufferInputElems[1].AlignedByteOffset = sizeof(XMFLOAT3);
-    gbufferInputElems[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-    gbufferInputElems[1].SemanticName = "NORMAL";
-    gbufferInputElems[2].AlignedByteOffset = sizeof(XMFLOAT3) * 2;
-    gbufferInputElems[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-    gbufferInputElems[2].SemanticName = "TANGENT";
-    gbufferInputElems[3].AlignedByteOffset = sizeof(XMFLOAT3) * 3;
-    gbufferInputElems[3].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-    gbufferInputElems[3].SemanticName = "BITANGENT";
-    gbufferInputElems[4].AlignedByteOffset = sizeof(XMFLOAT3) * 4;
-    gbufferInputElems[4].Format = DXGI_FORMAT_R32G32_FLOAT;
-    gbufferInputElems[4].SemanticName = "TEXCOORD";
-
-    HRESULT hr = Device->CreateInputLayout(gbufferInputElems, _countof(gbufferInputElems), GBuffer_vs, sizeof(GBuffer_vs), &GBufferIL);
+    D3D11_SAMPLER_DESC sd{};
+    sd.AddressU = sd.AddressV = sd.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sd.MaxLOD = D3D11_FLOAT32_MAX;
+    HRESULT hr = Device->CreateSamplerState(&sd, &LinearSampler);
     CHECKHR(hr);
 
-    D3D11_INPUT_ELEMENT_DESC dlightInputElems[1]{};
-    dlightInputElems[0].Format = DXGI_FORMAT_R32G32_FLOAT;
-    dlightInputElems[0].SemanticName = "POSITION";
-
-    hr = Device->CreateInputLayout(dlightInputElems, _countof(dlightInputElems), DirectionalLight_vs, sizeof(DirectionalLight_vs), &DLightIL);
+    // GBuffer Pass
+    GBufferPass = std::make_shared<ShaderPass>();
+    hr = GBufferPass->InitializeGraphics(Device, VertexFormat::Basic3D, GBuffer_vs, sizeof(GBuffer_vs), GBuffer_ps, sizeof(GBuffer_ps));
     CHECKHR(hr);
 
-    // Shaders
-    hr = Device->CreateVertexShader(GBuffer_vs, sizeof(GBuffer_vs), nullptr, &GBufferVS);
+    GBufferPass->SetPSSampler(0, LinearSampler);
+
+    DLightPass = std::make_shared<ShaderPass>();
+    hr = DLightPass->InitializeGraphics(Device, VertexFormat::Position2D, DirectionalLight_vs, sizeof(DirectionalLight_vs), DirectionalLight_ps, sizeof(DirectionalLight_ps));
     CHECKHR(hr);
 
-    hr = Device->CreatePixelShader(GBuffer_ps, sizeof(GBuffer_ps), nullptr, &GBufferPS);
+    DLightPass->SetPSSampler(0, LinearSampler);
+
+    DLightPassMsaa = std::make_shared<ShaderPass>();
+    hr = DLightPassMsaa->InitializeGraphics(Device, VertexFormat::Position2D, DirectionalLight_vs, sizeof(DirectionalLight_vs), DirectionalLight_MSAAx4_ps, sizeof(DirectionalLight_MSAAx4_ps));
     CHECKHR(hr);
 
-    hr = Device->CreateVertexShader(DirectionalLight_vs, sizeof(DirectionalLight_vs), nullptr, &DLightVS);
+    DLightPassMsaa->SetPSSampler(0, LinearSampler);
+
+    FinalPass = std::make_shared<ShaderPass>();
+    hr = FinalPass->InitializeGraphics(Device, VertexFormat::Basic3D, FinalPass_vs, sizeof(FinalPass_vs), FinalPass_ps, sizeof(FinalPass_ps));
     CHECKHR(hr);
 
-    hr = Device->CreatePixelShader(DirectionalLight_ps, sizeof(DirectionalLight_ps), nullptr, &DLightPS);
+    FinalPass->SetPSSampler(0, LinearSampler);
+
+    FinalPassMsaa = std::make_shared<ShaderPass>();
+    hr = FinalPassMsaa->InitializeGraphics(Device, VertexFormat::Basic3D, FinalPass_vs, sizeof(FinalPass_vs), FinalPass_MSAAx4_ps, sizeof(FinalPass_MSAAx4_ps));
     CHECKHR(hr);
 
-    hr = Device->CreatePixelShader(DirectionalLight_MSAAx4_ps, sizeof(DirectionalLight_MSAAx4_ps), nullptr, &DLightMsaaPS);
-    CHECKHR(hr);
-
-    hr = Device->CreateVertexShader(FinalPass_vs, sizeof(FinalPass_vs), nullptr, &FinalVS);
-    CHECKHR(hr);
-
-    hr = Device->CreatePixelShader(FinalPass_ps, sizeof(FinalPass_ps), nullptr, &FinalPS);
-    CHECKHR(hr);
-
-    hr = Device->CreatePixelShader(FinalPass_MSAAx4_ps, sizeof(FinalPass_MSAAx4_ps), nullptr, &FinalMsaaPS);
-    CHECKHR(hr);
+    FinalPassMsaa->SetPSSampler(0, LinearSampler);
 
     D3D11_BUFFER_DESC bd{};
     bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -111,10 +98,15 @@ HRESULT LPFRenderer::Initialize()
     hr = Device->CreateDepthStencilState(&dsDesc, &DepthWriteState);
     CHECKHR(hr);
 
+    GBufferPass->SetDepthState(DepthWriteState);
+
     dsDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
     dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
     hr = Device->CreateDepthStencilState(&dsDesc, &DepthReadState);
     CHECKHR(hr);
+
+    FinalPass->SetDepthState(DepthReadState);
+    FinalPassMsaa->SetDepthState(DepthReadState);
 
     // Quad
     Position2DVertex verts[]
@@ -129,13 +121,6 @@ HRESULT LPFRenderer::Initialize()
 
     QuadVB = std::make_shared<VertexBuffer>();
     hr = QuadVB->Initialize(Device, VertexFormat::Position2D, verts, sizeof(verts));
-    CHECKHR(hr);
-
-    D3D11_SAMPLER_DESC sd{};
-    sd.AddressU = sd.AddressV = sd.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-    sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    sd.MaxLOD = D3D11_FLOAT32_MAX;
-    hr = Device->CreateSamplerState(&sd, &LinearSampler);
     CHECKHR(hr);
 
     hr = RecreateSurfaces(MsaaEnabled ? 4 : 1);
@@ -204,47 +189,41 @@ HRESULT LPFRenderer::RecreateSurfaces(uint32_t sampleCount)
     hr = GBufferDepthBuffer->Initialize(Device, desc);
     CHECKHR(hr);
 
-    return hr;
-}
+    GBufferPass->SetRenderTarget(0, GBufferViewNormalsRT->GetRTV());
+    GBufferPass->SetRenderTarget(1, GBufferLinearDepthRT->GetRTV());
+    GBufferPass->SetDepthBuffer(GBufferDepthBuffer->GetDSV());
+    DLightPass->SetPSResource(0, GBufferViewNormalsRT->GetSRV());
+    DLightPass->SetPSResource(1, GBufferLinearDepthRT->GetSRV());
+    DLightPass->SetRenderTarget(0, LightRT->GetRTV());
+    DLightPassMsaa->SetPSResource(0, GBufferViewNormalsRT->GetSRV());
+    DLightPassMsaa->SetPSResource(1, GBufferLinearDepthRT->GetSRV());
+    DLightPassMsaa->SetRenderTarget(0, LightRT->GetRTV());
+    FinalPass->SetPSResource(0, LightRT->GetSRV());
+    FinalPass->SetRenderTarget(0, FinalRT->GetRTV());
+    FinalPass->SetDepthBuffer(GBufferDepthBuffer->GetDSV());
+    FinalPassMsaa->SetPSResource(0, LightRT->GetSRV());
+    FinalPassMsaa->SetRenderTarget(0, FinalRT->GetRTV());
+    FinalPassMsaa->SetDepthBuffer(GBufferDepthBuffer->GetDSV());
 
-void LPFRenderer::UnbindAllRTVsAndSRVs()
-{
-    ID3D11RenderTargetView* nullRTVs[]{ nullptr, nullptr, nullptr };
-    ID3D11ShaderResourceView* nullSRVs[]{ nullptr, nullptr, nullptr };
-    Context->OMSetRenderTargets(_countof(nullRTVs), nullRTVs, nullptr);
-    Context->PSSetShaderResources(0, _countof(nullSRVs), nullSRVs);
+    return hr;
 }
 
 void LPFRenderer::RenderGBuffer(const RenderView& view)
 {
-    UnbindAllRTVsAndSRVs();
-
     static const float ViewNormalsClear[] = { 0.f, 0.f, 0.f, 1.f };
     static const float LinearDepthClear[] = { 1.f, 1.f, 1.f, 1.f };
     Context->ClearRenderTargetView(GBufferViewNormalsRT->GetRTV().Get(), ViewNormalsClear);
     Context->ClearRenderTargetView(GBufferLinearDepthRT->GetRTV().Get(), LinearDepthClear);
     Context->ClearDepthStencilView(GBufferDepthBuffer->GetDSV().Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
 
-    ID3D11RenderTargetView* rtvs[]{ GBufferViewNormalsRT->GetRTV().Get(), GBufferLinearDepthRT->GetRTV().Get() };
-    Context->OMSetRenderTargets(_countof(rtvs), rtvs, GBufferDepthBuffer->GetDSV().Get());
-    Context->OMSetDepthStencilState(DepthWriteState.Get(), 0);
-    Context->RSSetViewports(1, &Viewport);
+    GBufferPass->Begin();
 
-    Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    Context->IASetInputLayout(GBufferIL.Get());
     Context->VSSetConstantBuffers(0, 1, GBufferVSCB.GetAddressOf());
-    Context->VSSetShader(GBufferVS.Get(), nullptr, 0);
-    Context->PSSetShader(GBufferPS.Get(), nullptr, 0);
 
     XMMATRIX worldToProjection = XMMatrixMultiply(XMLoadFloat4x4(&view.WorldToView), XMLoadFloat4x4(&view.ViewToProjection));
 
     for (auto& visual : Visuals)
     {
-        auto& vb = visual->GetVB();
-        uint32_t stride = vb->GetStride();
-        uint32_t offset = 0;
-        Context->IASetVertexBuffers(0, 1, vb->GetVB().GetAddressOf(), &stride, &offset);
-        Context->IASetIndexBuffer(visual->GetIB()->GetIB().Get(), DXGI_FORMAT_R32_UINT, 0);
         ID3D11ShaderResourceView* normalMap = visual->GetNormalTexture() ? visual->GetNormalTexture()->GetSRV().Get() : nullptr;
         Context->PSSetShaderResources(0, 1, &normalMap);
 
@@ -260,35 +239,30 @@ void LPFRenderer::RenderGBuffer(const RenderView& view)
         XMStoreFloat4x4(&constants->LocalToProjection, XMMatrixMultiply(XMLoadFloat4x4(&visual->GetLocalToWorld()), worldToProjection));
         Context->Unmap(GBufferVSCB.Get(), 0);
 
-        Context->DrawIndexed(visual->GetIndexCount(), visual->GetBaseIndex(), vb->GetBaseVertex());
+        GBufferPass->Draw(visual);
     }
+
+    GBufferPass->End();
 }
 
 void LPFRenderer::RenderLights(const RenderView& view)
 {
     UNREFERENCED_PARAMETER(view);
 
-    UnbindAllRTVsAndSRVs();
-
     static const float ClearColor[] = { 0.f, 0.f, 0.f, 0.f };
     Context->ClearRenderTargetView(LightRT->GetRTV().Get(), ClearColor);
 
-    ID3D11RenderTargetView* rtvs[]{ LightRT->GetRTV().Get(), nullptr };
-    Context->OMSetRenderTargets(_countof(rtvs), rtvs, nullptr);
-    Context->RSSetViewports(1, &Viewport);
+    if (MsaaEnabled)
+    {
+        DLightPassMsaa->Begin();
+    }
+    else
+    {
+        DLightPass->Begin();
+    }
 
-    Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    Context->IASetInputLayout(DLightIL.Get());
-
-    Context->VSSetShader(DLightVS.Get(), nullptr, 0);
     Context->VSSetConstantBuffers(0, 1, DLightVSCB.GetAddressOf());
-
-    Context->PSSetShader(MsaaEnabled ? DLightMsaaPS.Get() : DLightPS.Get(), nullptr, 0);
     Context->PSSetConstantBuffers(0, 1, DLightPSCB.GetAddressOf());
-
-    ID3D11ShaderResourceView* srvs[]{ GBufferViewNormalsRT->GetSRV().Get(), GBufferLinearDepthRT->GetSRV().Get() };
-    Context->PSSetShaderResources(0, _countof(srvs), srvs);
-    Context->PSSetSamplers(0, 1, LinearSampler.GetAddressOf());
 
     uint32_t stride = QuadVB->GetStride();
     uint32_t offset = 0;
@@ -329,42 +303,42 @@ void LPFRenderer::RenderLights(const RenderView& view)
     Context->Unmap(DLightPSCB.Get(), 0);
 
     Context->Draw(QuadVB->GetVertexCount(), QuadVB->GetBaseVertex());
+
+    if (MsaaEnabled)
+    {
+        DLightPassMsaa->End();
+    }
+    else
+    {
+        DLightPass->End();
+    }
 }
 
 void LPFRenderer::RenderFinal(const RenderView& view, const RenderTarget& renderTarget)
 {
-    UnbindAllRTVsAndSRVs();
-
     static const float ClearColor[] = { 0.f, 0.f, 0.f, 1.f };
     Context->ClearRenderTargetView(renderTarget.Texture->GetRTV().Get(), ClearColor);
 
-    ComPtr<ID3D11RenderTargetView> rtv = MsaaEnabled ? FinalRT->GetRTV() : renderTarget.Texture->GetRTV();
-    assert(MsaaEnabled == !!FinalRT);
+    std::shared_ptr<ShaderPass> pass;
 
-    ID3D11RenderTargetView* rtvs[]{ rtv.Get(), nullptr };
-    Context->OMSetRenderTargets(_countof(rtvs), rtvs, GBufferDepthBuffer->GetDSV().Get());
-    Context->OMSetDepthStencilState(DepthReadState.Get(), 0);
-    Context->RSSetViewports(1, &Viewport);
+    if (MsaaEnabled)
+    {
+        assert(FinalRT);
+        pass = FinalPassMsaa;
+    }
+    else
+    {
+        FinalPass->SetRenderTarget(0, renderTarget.Texture->GetRTV());
+        pass = FinalPass;
+    }
+    pass->Begin();
 
-    Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    Context->IASetInputLayout(GBufferIL.Get());
     Context->VSSetConstantBuffers(0, 1, GBufferVSCB.GetAddressOf());
-    Context->VSSetShader(FinalVS.Get(), nullptr, 0);
-    Context->PSSetShader(MsaaEnabled ? FinalMsaaPS.Get() : FinalPS.Get(), nullptr, 0);
-
-    Context->PSSetShaderResources(0, 1, LightRT->GetSRV().GetAddressOf());
-    Context->PSSetSamplers(0, 1, LinearSampler.GetAddressOf());
 
     XMMATRIX worldToProjection = XMMatrixMultiply(XMLoadFloat4x4(&view.WorldToView), XMLoadFloat4x4(&view.ViewToProjection));
 
     for (auto& visual : Visuals)
     {
-        auto& vb = visual->GetVB();
-        uint32_t stride = vb->GetStride();
-        uint32_t offset = 0;
-        Context->IASetVertexBuffers(0, 1, vb->GetVB().GetAddressOf(), &stride, &offset);
-        Context->IASetIndexBuffer(visual->GetIB()->GetIB().Get(), DXGI_FORMAT_R32_UINT, 0);
-
         if (!visual->GetAlbedoTexture())
         {
             continue;
@@ -383,9 +357,10 @@ void LPFRenderer::RenderFinal(const RenderView& view, const RenderTarget& render
         XMStoreFloat4x4(&constants->LocalToProjection, XMMatrixMultiply(XMLoadFloat4x4(&visual->GetLocalToWorld()), worldToProjection));
         Context->Unmap(GBufferVSCB.Get(), 0);
 
-        Context->DrawIndexed(visual->GetIndexCount(), visual->GetBaseIndex(), vb->GetBaseVertex());
+        pass->Draw(visual);
     }
 
+    pass->End();
     if (MsaaEnabled)
     {
         Context->ResolveSubresource(renderTarget.Texture->GetTexture().Get(), 0, FinalRT->GetTexture().Get(), 0, renderTarget.Texture->GetDesc().Format);

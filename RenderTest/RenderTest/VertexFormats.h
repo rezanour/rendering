@@ -6,6 +6,8 @@ enum class VertexFormat
     Position2D,
     PositionNormal,
     Basic3D,
+
+    Max,
 };
 
 struct Position2DVertex

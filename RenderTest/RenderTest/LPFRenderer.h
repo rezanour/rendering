@@ -5,6 +5,7 @@
 
 class RenderVisual;
 class VertexBuffer;
+class ShaderPass;
 
 // Light-prepass forward renderer
 class LPFRenderer : public BaseRenderer
@@ -35,7 +36,7 @@ public:
 
 private:
     HRESULT RecreateSurfaces(uint32_t sampleCount);
-    void UnbindAllRTVsAndSRVs();
+
     void RenderGBuffer(const RenderView& view);
     void RenderLights(const RenderView& view);
     void RenderFinal(const RenderView& view, const RenderTarget& renderTarget);
@@ -60,10 +61,8 @@ private:
         XMFLOAT4X4 LocalToProjection; // local -> world -> view -> projection
     };
 
-    ComPtr<ID3D11InputLayout> GBufferIL;
+    std::shared_ptr<ShaderPass> GBufferPass;
     ComPtr<ID3D11Buffer> GBufferVSCB;
-    ComPtr<ID3D11VertexShader> GBufferVS;
-    ComPtr<ID3D11PixelShader> GBufferPS;
     std::shared_ptr<Texture2D> GBufferViewNormalsRT;
     std::shared_ptr<Texture2D> GBufferLinearDepthRT;
     std::shared_ptr<Texture2D> GBufferDepthBuffer;
@@ -94,18 +93,14 @@ private:
         XMFLOAT3 Pad0;
     };
 
-    ComPtr<ID3D11InputLayout> DLightIL;
-    ComPtr<ID3D11VertexShader> DLightVS;
-    ComPtr<ID3D11PixelShader> DLightPS;
-    ComPtr<ID3D11PixelShader> DLightMsaaPS;
+    std::shared_ptr<ShaderPass> DLightPass;
+    std::shared_ptr<ShaderPass> DLightPassMsaa;
     ComPtr<ID3D11Buffer> DLightVSCB;
     ComPtr<ID3D11Buffer> DLightPSCB;
     std::shared_ptr<Texture2D> LightRT;
 
     // Final pass (TODO: should really be per-object materials)
-    ComPtr<ID3D11InputLayout> FinalIL;
-    ComPtr<ID3D11VertexShader> FinalVS;
-    ComPtr<ID3D11PixelShader> FinalPS;
-    ComPtr<ID3D11PixelShader> FinalMsaaPS;
+    std::shared_ptr<ShaderPass> FinalPass;
+    std::shared_ptr<ShaderPass> FinalPassMsaa;
     std::shared_ptr<Texture2D> FinalRT;
 };

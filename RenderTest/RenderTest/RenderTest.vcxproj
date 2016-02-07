@@ -107,6 +107,7 @@
     </ClCompile>
     <ClCompile Include="DxgiPresenter.cpp" />
     <ClCompile Include="RenderScene.cpp" />
+    <ClCompile Include="ShaderPass.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="RenderVisual.cpp" />
     <ClCompile Include="VertexBuffer.cpp" />
@@ -123,6 +124,7 @@
     <ClInclude Include="RenderingCommon.h" />
     <ClInclude Include="RenderScene.h" />
     <ClInclude Include="RenderVisual.h" />
+    <ClInclude Include="ShaderPass.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="VertexBuffer.h" />
     <ClInclude Include="VertexFormats.h" />
