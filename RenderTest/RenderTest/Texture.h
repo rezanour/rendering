@@ -42,6 +42,7 @@ public:
     virtual ~Texture2D();
 
     virtual HRESULT Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TEXTURE2D_DESC& desc);
+    virtual HRESULT Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TEXTURE2D_DESC& desc, const void* data);
     virtual HRESULT WrapExisting(const ComPtr<ID3D11Texture2D>& existing);
 
     const D3D11_TEXTURE2D_DESC& GetDesc() const

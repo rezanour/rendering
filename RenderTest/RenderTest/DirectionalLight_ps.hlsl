@@ -17,13 +17,27 @@ cbuffer DLightPSConstants
     uint NumLights;
 };
 
+#ifdef USE_MSAAx4
+Texture2DMS<float4, 4> ViewNormals;
+Texture2DMS<float4, 4> LinearDepths;
+#else
 Texture2D ViewNormals;
 Texture2D LinearDepths;
+SamplerState LinearSampler;
+#endif
 
 float4 main(DLightVSOutput input) : SV_TARGET
 {
-    float3 viewNormal = ViewNormals[input.Position.xy].xyz * 2 - 1;
-    float linearDepth = LinearDepths[input.Position.xy].x;
+#ifdef USE_MSAAx4
+    float3 viewNormal = AVERAGE_MSAA_SAMPLES(ViewNormals, input.Position.xy).xyz * 2 - 1;
+    float linearDepth = AVERAGE_MSAA_SAMPLES(LinearDepths, input.Position.xy).x;
+#else
+    uint width, height, numLevels;
+    ViewNormals.GetDimensions(0, width, height, numLevels);
+    float2 size = float2(width, height);
+    float3 viewNormal = ViewNormals.Sample(LinearSampler, input.Position.xy / size).xyz * 2 - 1;
+    float linearDepth = LinearDepths.Sample(LinearSampler, input.Position.xy / size).x;
+#endif
 
     float3 viewPosition = normalize(input.EyeRay) * linearDepth;
 
@@ -31,7 +45,7 @@ float4 main(DLightVSOutput input) : SV_TARGET
 
     for (uint i = 0; i < NumLights; ++i)
     {
-        light += (Lights[i].Color * dot(Lights[i].Direction, viewNormal));
+        light += saturate(Lights[i].Color * dot(Lights[i].Direction, viewNormal));
     }
 
     return float4(light, 0);

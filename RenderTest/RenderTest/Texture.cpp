@@ -20,6 +20,11 @@ Texture2D::~Texture2D()
 
 HRESULT Texture2D::Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TEXTURE2D_DESC& desc)
 {
+    return Initialize(device, desc, nullptr);
+}
+
+HRESULT Texture2D::Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TEXTURE2D_DESC& desc, const void* data)
+{
     Texture = nullptr;
     SRV = nullptr;
     RTV = nullptr;
@@ -28,8 +33,46 @@ HRESULT Texture2D::Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TE
 
     Desc = desc;
 
-    HRESULT hr = device->CreateTexture2D(&desc, nullptr, &Texture);
-    CHECKHR(hr);
+    HRESULT hr = S_OK;
+    if (data)
+    {
+        if (desc.MipLevels > 1 && desc.Width == desc.Height)
+        {
+            uint32_t width = desc.Width;
+            uint32_t height = desc.Height;
+            const uint8_t* pData = (const uint8_t*)data;
+            std::unique_ptr<D3D11_SUBRESOURCE_DATA[]> inits(new D3D11_SUBRESOURCE_DATA[desc.MipLevels]);
+            for (uint32_t i = 0; i < desc.MipLevels; ++i)
+            {
+                inits[i].pSysMem = pData;
+                inits[i].SysMemPitch = width * 4;
+                inits[i].SysMemSlicePitch = width * height * 4;
+
+                pData += inits[i].SysMemSlicePitch;
+                width >>= 1;
+                height >>= 1;
+            }
+
+            hr = device->CreateTexture2D(&desc, inits.get(), &Texture);
+            CHECKHR(hr);
+        }
+        else
+        {
+            D3D11_TEXTURE2D_DESC d = desc;
+            d.MipLevels = 1;
+            D3D11_SUBRESOURCE_DATA init{};
+            init.pSysMem = data;
+            init.SysMemPitch = desc.Width * 4; // HACK (4 byte pixels only)
+            init.SysMemSlicePitch = desc.Width * desc.Height * 4;
+            hr = device->CreateTexture2D(&d, &init, &Texture);
+            CHECKHR(hr);
+        }
+    }
+    else
+    {
+        hr = device->CreateTexture2D(&desc, nullptr, &Texture);
+        CHECKHR(hr);
+    }
 
     hr = CreateViews(device);
     CHECKHR(hr);

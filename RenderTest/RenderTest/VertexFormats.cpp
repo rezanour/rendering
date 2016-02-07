@@ -11,6 +11,9 @@ uint32_t GetVertexStride(VertexFormat format)
     case VertexFormat::PositionNormal:
         return sizeof(PositionNormalVertex);
 
+    case VertexFormat::Basic3D:
+        return sizeof(Basic3DVertex);
+
     case VertexFormat::Unknown:
         __fallthrough;
 
@@ -29,6 +32,9 @@ uint32_t GetVertexPositionOffset(VertexFormat format)
 
     case VertexFormat::PositionNormal:
         return FIELD_OFFSET(PositionNormalVertex, Position);
+
+    case VertexFormat::Basic3D:
+        return FIELD_OFFSET(Basic3DVertex, Position);
 
     case VertexFormat::Unknown:
         __fallthrough;

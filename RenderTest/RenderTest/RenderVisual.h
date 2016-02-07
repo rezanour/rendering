@@ -2,6 +2,7 @@
 
 class VertexBuffer;
 class IndexBuffer;
+class Texture2D;
 
 class RenderVisual : NonCopyable
 {
@@ -32,6 +33,13 @@ public:
     {
         return IndexCount;
     }
+
+    const std::shared_ptr<Texture2D>& GetAlbedoTexture() const;
+    void SetAlbedoTexture(const std::shared_ptr<Texture2D>& texture);
+    const std::shared_ptr<Texture2D>& GetNormalTexture() const;
+    void SetNormalTexture(const std::shared_ptr<Texture2D>& texture);
+    const std::shared_ptr<Texture2D>& GetSpecularTexture() const;
+    void SetSpecularTexture(const std::shared_ptr<Texture2D>& texture);
 
     const XMFLOAT3& GetPosition() const
     {
@@ -67,6 +75,10 @@ private:
     std::shared_ptr<IndexBuffer> IB;
     uint32_t BaseIndex;
     uint32_t IndexCount;
+
+    std::shared_ptr<Texture2D> AlbedoTexture;
+    std::shared_ptr<Texture2D> NormalTexture;
+    std::shared_ptr<Texture2D> SpecularTexture;
 
     XMFLOAT3 Position;
     XMFLOAT4 Orientation;

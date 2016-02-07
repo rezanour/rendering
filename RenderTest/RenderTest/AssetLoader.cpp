@@ -4,6 +4,7 @@
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
 #include "RenderVisual.h"
+#include "Texture.h"
 
 using namespace Microsoft::WRL::Wrappers;
 
@@ -52,6 +53,23 @@ struct ModelPart
     uint32_t NumIndices;
 };
 
+#pragma pack(1)
+
+// TEXTURE
+
+// Followed immediately by raw texture data ready for uploading to GPU
+struct TextureHeader
+{
+    static const uint32_t ExpectedSignature = 'TEX ';
+
+    uint32_t Signature;
+    uint32_t Width;
+    uint32_t Height;
+    uint32_t ArrayCount;
+    uint32_t MipLevels;
+    DXGI_FORMAT Format;
+};
+
 #pragma pack(pop)
 
 AssetLoader::AssetLoader(const ComPtr<ID3D11Device>& device, const std::wstring& assetRoot)
@@ -59,9 +77,9 @@ AssetLoader::AssetLoader(const ComPtr<ID3D11Device>& device, const std::wstring&
     , AssetRoot(assetRoot)
 {
     assert(!assetRoot.empty());
-    if (AssetRoot[AssetRoot.length() - 1] == L'\\')
+    if (AssetRoot[AssetRoot.length() - 1] != L'\\')
     {
-        AssetRoot.pop_back();
+        AssetRoot.push_back(L'\\');
     }
 }
 
@@ -76,12 +94,7 @@ HRESULT AssetLoader::LoadModel(const std::wstring& relativePath, std::vector<std
 
     visuals->clear();
 
-    std::wstring fullPath = AssetRoot;
-    if (relativePath[0] != L'\\')
-    {
-        fullPath += L'\\';
-    }
-    fullPath += relativePath;
+    std::wstring fullPath = AssetRoot + relativePath;
 
     FileHandle modelFile(CreateFile(fullPath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
     if (!modelFile.IsValid())
@@ -118,16 +131,19 @@ HRESULT AssetLoader::LoadModel(const std::wstring& relativePath, std::vector<std
         return HRESULT_FROM_WIN32(GetLastError());
     }
 
-    std::unique_ptr<PositionNormalVertex[]> vertices(new PositionNormalVertex[header.NumVertices]);
+    std::unique_ptr<Basic3DVertex[]> vertices(new Basic3DVertex[header.NumVertices]);
     for (uint32_t i = 0; i < header.NumVertices; ++i)
     {
         vertices[i].Position = verts[i].Position;
         vertices[i].Normal = verts[i].Normal;
+        vertices[i].Tangent = verts[i].Tangent;
+        vertices[i].BiTangent = verts[i].BiTangent;
+        vertices[i].TexCoord = verts[i].TexCoord;
     }
     verts.reset();
 
     std::shared_ptr<VertexBuffer> vb = std::make_shared<VertexBuffer>();
-    HRESULT hr = vb->Initialize(Device, VertexFormat::PositionNormal, vertices.get(), sizeof(PositionNormalVertex) * header.NumVertices);
+    HRESULT hr = vb->Initialize(Device, VertexFormat::Basic3D, vertices.get(), sizeof(Basic3DVertex) * header.NumVertices);
     CHECKHR(hr);
 
     std::shared_ptr<IndexBuffer> ib = std::make_shared<IndexBuffer>();
@@ -162,8 +178,128 @@ HRESULT AssetLoader::LoadModel(const std::wstring& relativePath, std::vector<std
             CHECKHR(hr);
 
             visuals->push_back(visual);
+
+            if (part.DiffuseTexture[0] != 0)
+            {
+                std::wstring path = AssetRoot + part.DiffuseTexture;
+                auto it = CachedTextures.find(path);
+                if (it == CachedTextures.end())
+                {
+                    std::shared_ptr<Texture2D> texture;
+                    hr = LoadTexture(path, &texture);
+                    CHECKHR(hr);
+                    CachedTextures[path] = texture;
+                    visual->SetAlbedoTexture(texture);
+                }
+                else
+                {
+                    visual->SetAlbedoTexture(it->second);
+                }
+            }
+            if (part.NormalTexture[0] != 0)
+            {
+                std::wstring path = AssetRoot + part.NormalTexture;
+                auto it = CachedTextures.find(path);
+                if (it == CachedTextures.end())
+                {
+                    std::shared_ptr<Texture2D> texture;
+                    hr = LoadTexture(path, &texture);
+                    CHECKHR(hr);
+                    CachedTextures[path] = texture;
+                    visual->SetNormalTexture(texture);
+                }
+                else
+                {
+                    visual->SetNormalTexture(it->second);
+                }
+            }
+            if (part.SpecularTexture[0] != 0)
+            {
+                std::wstring path = AssetRoot + part.SpecularTexture;
+                auto it = CachedTextures.find(path);
+                if (it == CachedTextures.end())
+                {
+                    std::shared_ptr<Texture2D> texture;
+                    hr = LoadTexture(path, &texture);
+                    CHECKHR(hr);
+                    CachedTextures[path] = texture;
+                    visual->SetSpecularTexture(texture);
+                }
+                else
+                {
+                    visual->SetSpecularTexture(it->second);
+                }
+            }
         }
     }
 
     return S_OK;
 }
+
+HRESULT AssetLoader::LoadTexture(const std::wstring& relativePath, std::shared_ptr<Texture2D>* texture)
+{
+    assert(!relativePath.empty());
+    assert(texture != nullptr);
+
+    texture->reset();
+
+    std::wstring fullPath = AssetRoot + relativePath;
+
+    FileHandle texFile(CreateFile(fullPath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
+    if (!texFile.IsValid())
+    {
+        assert(false);
+        return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+    }
+
+    DWORD bytesRead{};
+    uint32_t fileSize = GetFileSize(texFile.Get(), nullptr);
+
+    TextureHeader texHeader{};
+    if (!ReadFile(texFile.Get(), &texHeader, sizeof(texHeader), &bytesRead, nullptr))
+    {
+        assert(false);
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    if (texHeader.Signature != TextureHeader::ExpectedSignature)
+    {
+        assert(false);
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
+    uint32_t pixelDataSize = fileSize - sizeof(TextureHeader);
+    std::unique_ptr<uint8_t[]> pixelData(new uint8_t[pixelDataSize]);
+    if (!ReadFile(texFile.Get(), pixelData.get(), pixelDataSize, &bytesRead, nullptr))
+    {
+        assert(false);
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    D3D11_TEXTURE2D_DESC td{};
+    td.ArraySize = texHeader.ArrayCount;
+    td.Format = texHeader.Format;
+#if USE_SRGB
+    if (td.Format == DXGI_FORMAT_R8G8B8A8_UNORM)
+    {
+        td.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    }
+    else if (td.Format == DXGI_FORMAT_B8G8R8A8_UNORM)
+    {
+        td.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+    }
+#endif
+    td.Width = texHeader.Width;
+    td.Height = texHeader.Height;
+    td.MipLevels = texHeader.MipLevels;
+    td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    td.SampleDesc.Count = 1;
+    td.Usage = D3D11_USAGE_DEFAULT;
+
+    *texture = std::make_shared<Texture2D>();
+    HRESULT hr = (*texture)->Initialize(Device, td, pixelData.get());
+    CHECKHR(hr);
+
+    return S_OK;
+}
+

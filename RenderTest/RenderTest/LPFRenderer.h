@@ -15,6 +15,17 @@ public:
 
     virtual HRESULT Initialize() override;
 
+    virtual bool IsMsaaEnabled() const override
+    {
+        return MsaaEnabled;
+    }
+
+    virtual HRESULT EnableMsaa(bool enable) override
+    {
+        MsaaEnabled = enable;
+        return RecreateSurfaces(MsaaEnabled ? 4 : 1);
+    }
+
     virtual void SetScene(const std::shared_ptr<RenderScene>& scene) override
     {
         Scene = scene;
@@ -23,6 +34,7 @@ public:
     virtual HRESULT RenderFrame(const RenderTarget& renderTarget, const RenderView& view) override;
 
 private:
+    HRESULT RecreateSurfaces(uint32_t sampleCount);
     void UnbindAllRTVsAndSRVs();
     void RenderGBuffer(const RenderView& view);
     void RenderLights(const RenderView& view);
@@ -35,8 +47,11 @@ private:
     std::vector<std::shared_ptr<RenderVisual>> Visuals;
     D3D11_VIEWPORT Viewport{};
 
+    bool MsaaEnabled = true;
+
     ComPtr<ID3D11DepthStencilState> DepthWriteState;
     ComPtr<ID3D11DepthStencilState> DepthReadState;
+    ComPtr<ID3D11SamplerState> LinearSampler;
 
     // GBuffer pass
     struct GBufferVSConstants
@@ -82,6 +97,7 @@ private:
     ComPtr<ID3D11InputLayout> DLightIL;
     ComPtr<ID3D11VertexShader> DLightVS;
     ComPtr<ID3D11PixelShader> DLightPS;
+    ComPtr<ID3D11PixelShader> DLightMsaaPS;
     ComPtr<ID3D11Buffer> DLightVSCB;
     ComPtr<ID3D11Buffer> DLightPSCB;
     std::shared_ptr<Texture2D> LightRT;
@@ -90,4 +106,6 @@ private:
     ComPtr<ID3D11InputLayout> FinalIL;
     ComPtr<ID3D11VertexShader> FinalVS;
     ComPtr<ID3D11PixelShader> FinalPS;
+    ComPtr<ID3D11PixelShader> FinalMsaaPS;
+    std::shared_ptr<Texture2D> FinalRT;
 };

@@ -71,8 +71,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
 
     // Camera info
     XMVECTOR position = XMVectorSet(0.f, 10.f, 0.f, 1.f);
-    XMVECTOR forward = XMVectorSet(0.f, 0.f, -1.f, 0.f);
-    XMVECTOR right = XMVectorSet(1.f, 0.f, 0.f, 0.f);
+    XMVECTOR forward = XMVectorSet(1.f, 0.f, 0.f, 0.f);
+    XMVECTOR right = XMVectorSet(0.f, 0.f, -1.f, 0.f);
     XMVECTOR up = XMVectorSet(0.f, 1.f, 0.f, 0.f);
     float yaw = 0.f;
     float pitch = 0.f;
@@ -222,6 +222,15 @@ LRESULT CALLBACK AppWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
     {
     case WM_CLOSE:
         PostQuitMessage(0);
+        break;
+
+    case WM_KEYDOWN:
+        if (wParam == VK_F4)
+        {
+            bool enabled = Renderer->IsMsaaEnabled();
+            HRESULT hr = Renderer->EnableMsaa(!enabled);
+            CHECKHR(hr);
+        }
         break;
     }
 

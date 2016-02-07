@@ -2,6 +2,7 @@
 #include "RenderVisual.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
+#include "Texture.h"
 
 RenderVisual::RenderVisual()
     : BaseIndex(0)
@@ -26,6 +27,36 @@ HRESULT RenderVisual::Initialize(
     BaseIndex = baseIndex;
     IndexCount = indexCount;
     return S_OK;
+}
+
+const std::shared_ptr<Texture2D>& RenderVisual::GetAlbedoTexture() const
+{
+    return AlbedoTexture;
+}
+
+void RenderVisual::SetAlbedoTexture(const std::shared_ptr<Texture2D>& texture)
+{
+    AlbedoTexture = texture;
+}
+
+const std::shared_ptr<Texture2D>& RenderVisual::GetNormalTexture() const
+{
+    return NormalTexture;
+}
+
+void RenderVisual::SetNormalTexture(const std::shared_ptr<Texture2D>& texture)
+{
+    NormalTexture = texture;
+}
+
+const std::shared_ptr<Texture2D>& RenderVisual::GetSpecularTexture() const
+{
+    return SpecularTexture;
+}
+
+void RenderVisual::SetSpecularTexture(const std::shared_ptr<Texture2D>& texture)
+{
+    SpecularTexture = texture;
 }
 
 const XMFLOAT4X4& RenderVisual::GetLocalToWorld() const
