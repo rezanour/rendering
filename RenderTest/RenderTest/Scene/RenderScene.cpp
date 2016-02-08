@@ -1,7 +1,7 @@
 #include "Precomp.h"
 #include "RenderScene.h"
 #include "RenderVisual.h"
-#include "RenderingCommon.h"
+#include "CoreGraphics/RenderingCommon.h"
 
 RenderScene::RenderScene()
 {

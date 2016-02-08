@@ -6,7 +6,7 @@
 class DxgiPresenter : public BasePresenter
 {
 public:
-    DxgiPresenter(const ComPtr<ID3D11Device>& device, HWND targetWindow);
+    DxgiPresenter(const std::shared_ptr<GraphicsDevice>& graphics, HWND targetWindow);
     virtual ~DxgiPresenter();
 
     virtual HRESULT Initialize() override;

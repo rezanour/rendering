@@ -1,17 +1,18 @@
 #pragma once
 
-#include "BaseRenderer.h"
-#include "RenderingCommon.h"
+#include "CoreGraphics/BaseRenderer.h"
+#include "CoreGraphics/RenderingCommon.h"
 
 class RenderVisual;
 class VertexBuffer;
+class ConstantBuffer;
 class ShaderPass;
 
 // Light-prepass forward renderer
 class LPFRenderer : public BaseRenderer
 {
 public:
-    LPFRenderer(const ComPtr<ID3D11Device>& device);
+    LPFRenderer(const std::shared_ptr<GraphicsDevice>& graphics);
     virtual ~LPFRenderer();
 
     virtual HRESULT Initialize() override;
@@ -50,10 +51,6 @@ private:
 
     bool MsaaEnabled = true;
 
-    ComPtr<ID3D11DepthStencilState> DepthWriteState;
-    ComPtr<ID3D11DepthStencilState> DepthReadState;
-    ComPtr<ID3D11SamplerState> LinearSampler;
-
     // GBuffer pass
     struct GBufferVSConstants
     {
@@ -62,14 +59,14 @@ private:
     };
 
     std::shared_ptr<ShaderPass> GBufferPass;
-    ComPtr<ID3D11Buffer> GBufferVSCB;
+    std::shared_ptr<ConstantBuffer> GBufferVSCB;
     std::shared_ptr<Texture2D> GBufferViewNormalsRT;
     std::shared_ptr<Texture2D> GBufferLinearDepthRT;
     std::shared_ptr<Texture2D> GBufferDepthBuffer;
 
     // Light pass
 
-    std::shared_ptr<VertexBuffer> QuadVB;
+    std::shared_ptr<RenderVisual> QuadVisual;
 
     struct DLightVSConstants
     {
@@ -95,8 +92,8 @@ private:
 
     std::shared_ptr<ShaderPass> DLightPass;
     std::shared_ptr<ShaderPass> DLightPassMsaa;
-    ComPtr<ID3D11Buffer> DLightVSCB;
-    ComPtr<ID3D11Buffer> DLightPSCB;
+    std::shared_ptr<ConstantBuffer> DLightVSCB;
+    std::shared_ptr<ConstantBuffer> DLightPSCB;
     std::shared_ptr<Texture2D> LightRT;
 
     // Final pass (TODO: should really be per-object materials)

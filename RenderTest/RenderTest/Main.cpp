@@ -1,12 +1,13 @@
 #include "Precomp.h"
-#include "DxgiPresenter.h"
-#include "LPFRenderer.h"
-#include "Texture.h"
-#include "RenderingCommon.h"
-#include "RenderScene.h"
-#include "RenderVisual.h"
-#include "VertexBuffer.h"
-#include "VertexFormats.h"
+#include "CoreGraphics/GraphicsDevice.h"
+#include "CoreGraphics/DxgiPresenter.h"
+#include "CoreGraphics/Texture.h"
+#include "CoreGraphics/RenderingCommon.h"
+#include "CoreGraphics/VertexBuffer.h"
+#include "CoreGraphics/VertexFormats.h"
+#include "Renderers/LPFRenderer.h"
+#include "Scene/RenderScene.h"
+#include "Scene/RenderVisual.h"
 #include "AssetLoader.h"
 
 using namespace Microsoft::WRL;
@@ -23,9 +24,7 @@ static const float MouseTurnSpeed = 0.005f;
 
 static HWND AppWindow;
 static ComPtr<IDXGIFactory2> Factory;
-static ComPtr<IDXGIAdapter> Adapter;
-static ComPtr<ID3D11Device> Device;
-static ComPtr<ID3D11DeviceContext> Context;
+static std::shared_ptr<GraphicsDevice> Graphics;
 static std::unique_ptr<BasePresenter> Presenter;
 static std::unique_ptr<BaseRenderer> Renderer;
 static std::shared_ptr<RenderScene> Scene;
@@ -276,31 +275,26 @@ HRESULT GfxInitialize()
     HRESULT hr = CreateDXGIFactory2(dxgiFlags, IID_PPV_ARGS(&Factory));
     CHECKHR(hr);
 
-    hr = Factory->EnumAdapters(0, &Adapter);
-    CHECKHR(hr);
-
-    UINT d3dFlags = 0;
+    bool createDebug = false;
 #ifdef _DEBUG
-    d3dFlags |= D3D11_CREATE_DEVICE_DEBUG;
+    createDebug = true;
 #endif
 
-    D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
-
-    hr = D3D11CreateDevice(Adapter.Get(), D3D_DRIVER_TYPE_UNKNOWN, nullptr,
-        d3dFlags, &featureLevel, 1, D3D11_SDK_VERSION, &Device, nullptr, &Context);
+    Graphics = std::make_shared<GraphicsDevice>();
+    hr = Graphics->Initialize(Factory, nullptr, createDebug);
     CHECKHR(hr);
 
-    Presenter.reset(new DxgiPresenter(Device, AppWindow));
+    Presenter = std::make_unique<DxgiPresenter>(Graphics, AppWindow);
     hr = Presenter->Initialize();
     CHECKHR(hr);
 
-    Renderer.reset(new LPFRenderer(Device));
+    Renderer = std::make_unique<LPFRenderer>(Graphics);
     hr = Renderer->Initialize();
     CHECKHR(hr);
 
     Scene = std::make_shared<RenderScene>();
 
-    Assets = std::make_shared<AssetLoader>(Device, L"..\\ProcessedContent");
+    Assets = std::make_shared<AssetLoader>(Graphics, L"..\\ProcessedContent");
     hr = Assets->LoadModel(L"crytek-sponza\\sponza.model", &Visuals);
     CHECKHR(hr);
 
@@ -333,8 +327,6 @@ void GfxShutdown()
     BackBufferRT.Texture = nullptr;
     Renderer = nullptr;
     Presenter = nullptr;
-    Context = nullptr;
-    Device = nullptr;
-    Adapter = nullptr;
+    Graphics = nullptr;
     Factory = nullptr;
 }

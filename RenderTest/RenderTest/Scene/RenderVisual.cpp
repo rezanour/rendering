@@ -1,8 +1,8 @@
 #include "Precomp.h"
 #include "RenderVisual.h"
-#include "VertexBuffer.h"
-#include "IndexBuffer.h"
-#include "Texture.h"
+#include "CoreGraphics/VertexBuffer.h"
+#include "CoreGraphics/IndexBuffer.h"
+#include "CoreGraphics/Texture.h"
 
 RenderVisual::RenderVisual()
     : BaseIndex(0)

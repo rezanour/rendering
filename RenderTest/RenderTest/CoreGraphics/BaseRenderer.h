@@ -1,5 +1,6 @@
 #pragma once
 
+class GraphicsDevice;
 struct RenderTarget;
 class RenderScene;
 struct RenderView;
@@ -7,8 +8,8 @@ struct RenderView;
 class BaseRenderer : NonCopyable
 {
 public:
-    BaseRenderer(const ComPtr<ID3D11Device>& device)
-        : Device(device)
+    BaseRenderer(const std::shared_ptr<GraphicsDevice>& graphics)
+        : Graphics(graphics)
     {}
 
     virtual ~BaseRenderer()
@@ -24,5 +25,5 @@ public:
     virtual HRESULT RenderFrame(const RenderTarget& renderTarget, const RenderView& view) = 0;
 
 protected:
-    ComPtr<ID3D11Device> Device;
+    std::shared_ptr<GraphicsDevice> Graphics;
 };

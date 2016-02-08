@@ -1,9 +1,10 @@
 #include "Precomp.h"
 #include "DxgiPresenter.h"
+#include "GraphicsDevice.h"
 #include "Texture.h"
 
-DxgiPresenter::DxgiPresenter(const ComPtr<ID3D11Device>& device, HWND targetWindow)
-    : BasePresenter(device)
+DxgiPresenter::DxgiPresenter(const std::shared_ptr<GraphicsDevice>& graphics, HWND targetWindow)
+    : BasePresenter(graphics)
     , TargetWindow(targetWindow)
 {
 }
@@ -15,7 +16,7 @@ DxgiPresenter::~DxgiPresenter()
 HRESULT DxgiPresenter::Initialize()
 {
     ComPtr<IDXGIDevice> dxgiDevice;
-    HRESULT hr = Device.As(&dxgiDevice);
+    HRESULT hr = Graphics->GetDevice().As(&dxgiDevice);
     CHECKHR(hr);
 
     ComPtr<IDXGIAdapter> adapter;
@@ -40,7 +41,7 @@ HRESULT DxgiPresenter::Initialize()
     desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
     desc.Scaling = DXGI_SCALING_STRETCH;
 
-    hr = factory->CreateSwapChainForHwnd(Device.Get(), TargetWindow,
+    hr = factory->CreateSwapChainForHwnd(Graphics->GetDevice().Get(), TargetWindow,
         &desc, nullptr, nullptr, &SwapChain);
     CHECKHR(hr);
 

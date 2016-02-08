@@ -1,13 +1,14 @@
 #pragma once
 
+class GraphicsDevice;
 class Texture2D;
 
 // base class for presenters
 class BasePresenter : NonCopyable
 {
 public:
-    BasePresenter(const ComPtr<ID3D11Device>& device)
-        : Device(device)
+    BasePresenter(const std::shared_ptr<GraphicsDevice>& graphics)
+        : Graphics(graphics)
     {}
 
     virtual ~BasePresenter()
@@ -20,5 +21,5 @@ public:
     virtual HRESULT Present() = 0;
 
 protected:
-    ComPtr<ID3D11Device> Device;
+    std::shared_ptr<GraphicsDevice> Graphics;
 };

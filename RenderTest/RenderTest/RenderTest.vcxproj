@@ -57,6 +57,7 @@
       <SDLCheck>true</SDLCheck>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>Precomp.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir);</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -66,7 +67,7 @@
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
       <VariableName>%(Filename)</VariableName>
-      <HeaderFileOutput>%(Filename).h</HeaderFileOutput>
+      <HeaderFileOutput>Shaders\%(Filename).h</HeaderFileOutput>
       <ObjectFileOutput />
     </FxCompile>
   </ItemDefinitionGroup>
@@ -81,6 +82,7 @@
       <SDLCheck>true</SDLCheck>
       <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>Precomp.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir);</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -92,89 +94,83 @@
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
       <VariableName>%(Filename)</VariableName>
-      <HeaderFileOutput>%(Filename).h</HeaderFileOutput>
+      <HeaderFileOutput>Shaders\%(Filename).h</HeaderFileOutput>
       <ObjectFileOutput />
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AssetLoader.cpp" />
-    <ClCompile Include="IndexBuffer.cpp" />
-    <ClCompile Include="LPFRenderer.cpp" />
+    <ClCompile Include="CoreGraphics\ConstantBuffer.cpp" />
+    <ClCompile Include="CoreGraphics\GraphicsDevice.cpp" />
+    <ClCompile Include="CoreGraphics\IndexBuffer.cpp" />
+    <ClCompile Include="Renderers\LPFRenderer.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Precomp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="DxgiPresenter.cpp" />
-    <ClCompile Include="RenderScene.cpp" />
-    <ClCompile Include="ShaderPass.cpp" />
-    <ClCompile Include="Texture.cpp" />
-    <ClCompile Include="RenderVisual.cpp" />
-    <ClCompile Include="VertexBuffer.cpp" />
-    <ClCompile Include="VertexFormats.cpp" />
+    <ClCompile Include="CoreGraphics\DxgiPresenter.cpp" />
+    <ClCompile Include="Scene\RenderScene.cpp" />
+    <ClCompile Include="CoreGraphics\ShaderPass.cpp" />
+    <ClCompile Include="CoreGraphics\Texture.cpp" />
+    <ClCompile Include="Scene\RenderVisual.cpp" />
+    <ClCompile Include="CoreGraphics\VertexBuffer.cpp" />
+    <ClCompile Include="CoreGraphics\VertexFormats.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BasePresenter.h" />
-    <ClInclude Include="BaseRenderer.h" />
+    <ClInclude Include="CoreGraphics\BasePresenter.h" />
+    <ClInclude Include="CoreGraphics\BaseRenderer.h" />
     <ClInclude Include="AssetLoader.h" />
-    <ClInclude Include="IndexBuffer.h" />
+    <ClInclude Include="CoreGraphics\ConstantBuffer.h" />
+    <ClInclude Include="CoreGraphics\GraphicsDevice.h" />
+    <ClInclude Include="CoreGraphics\IndexBuffer.h" />
     <ClInclude Include="Precomp.h" />
-    <ClInclude Include="DxgiPresenter.h" />
-    <ClInclude Include="LPFRenderer.h" />
-    <ClInclude Include="RenderingCommon.h" />
-    <ClInclude Include="RenderScene.h" />
-    <ClInclude Include="RenderVisual.h" />
-    <ClInclude Include="ShaderPass.h" />
-    <ClInclude Include="Texture.h" />
-    <ClInclude Include="VertexBuffer.h" />
-    <ClInclude Include="VertexFormats.h" />
+    <ClInclude Include="CoreGraphics\DxgiPresenter.h" />
+    <ClInclude Include="Renderers\LPFRenderer.h" />
+    <ClInclude Include="CoreGraphics\RenderingCommon.h" />
+    <ClInclude Include="Scene\RenderScene.h" />
+    <ClInclude Include="Scene\RenderVisual.h" />
+    <ClInclude Include="CoreGraphics\ShaderPass.h" />
+    <ClInclude Include="CoreGraphics\Texture.h" />
+    <ClInclude Include="CoreGraphics\VertexBuffer.h" />
+    <ClInclude Include="CoreGraphics\VertexFormats.h" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="DirectionalLight_MSAAx4_ps.hlsl">
+    <FxCompile Include="Shaders\DirectionalLight_MSAAx4_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="FinalPass_MSAAx4_ps.hlsl">
+    <FxCompile Include="Shaders\FinalPass_MSAAx4_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="FinalPass_ps.hlsl">
+    <FxCompile Include="Shaders\FinalPass_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="FinalPass_vs.hlsl">
+    <FxCompile Include="Shaders\FinalPass_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="GBuffer_ps.hlsl">
+    <FxCompile Include="Shaders\GBuffer_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="GBuffer_vs.hlsl">
+    <FxCompile Include="Shaders\GBuffer_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="DirectionalLight_ps.hlsl">
+    <FxCompile Include="Shaders\DirectionalLight_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="DirectionalLight_vs.hlsl">
+    <FxCompile Include="Shaders\DirectionalLight_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
-      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename)</VariableName>
-      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename).h</HeaderFileOutput>
-      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </ObjectFileOutput>
-      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename)</VariableName>
-      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename).h</HeaderFileOutput>
-      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </ObjectFileOutput>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Common.hlsli" />
+    <None Include="Shaders\Common.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

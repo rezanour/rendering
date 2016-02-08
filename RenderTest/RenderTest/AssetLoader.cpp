@@ -1,10 +1,11 @@
 #include "Precomp.h"
 #include "AssetLoader.h"
-#include "VertexFormats.h"
-#include "VertexBuffer.h"
-#include "IndexBuffer.h"
-#include "RenderVisual.h"
-#include "Texture.h"
+#include "CoreGraphics/GraphicsDevice.h"
+#include "CoreGraphics/VertexFormats.h"
+#include "CoreGraphics/VertexBuffer.h"
+#include "CoreGraphics/IndexBuffer.h"
+#include "CoreGraphics/Texture.h"
+#include "Scene/RenderVisual.h"
 
 using namespace Microsoft::WRL::Wrappers;
 
@@ -72,8 +73,8 @@ struct TextureHeader
 
 #pragma pack(pop)
 
-AssetLoader::AssetLoader(const ComPtr<ID3D11Device>& device, const std::wstring& assetRoot)
-    : Device(device)
+AssetLoader::AssetLoader(const std::shared_ptr<GraphicsDevice>& graphics, const std::wstring& assetRoot)
+    : Graphics(graphics)
     , AssetRoot(assetRoot)
 {
     assert(!assetRoot.empty());
@@ -142,12 +143,12 @@ HRESULT AssetLoader::LoadModel(const std::wstring& relativePath, std::vector<std
     }
     verts.reset();
 
-    std::shared_ptr<VertexBuffer> vb = std::make_shared<VertexBuffer>();
-    HRESULT hr = vb->Initialize(Device, VertexFormat::Basic3D, vertices.get(), sizeof(Basic3DVertex) * header.NumVertices);
+    std::shared_ptr<VertexBuffer> vb;
+    HRESULT hr = Graphics->CreateVertexBuffer(VertexFormat::Basic3D, vertices.get(), sizeof(Basic3DVertex) * header.NumVertices, &vb);
     CHECKHR(hr);
 
-    std::shared_ptr<IndexBuffer> ib = std::make_shared<IndexBuffer>();
-    hr = ib->Initialize(Device, indices.get(), sizeof(uint32_t) * header.NumIndices);
+    std::shared_ptr<IndexBuffer> ib;
+    hr = Graphics->CreateIndexBuffer(indices.get(), sizeof(uint32_t) * header.NumIndices, &ib);
     CHECKHR(hr);
 
     // Free up memory
@@ -296,8 +297,7 @@ HRESULT AssetLoader::LoadTexture(const std::wstring& relativePath, std::shared_p
     td.SampleDesc.Count = 1;
     td.Usage = D3D11_USAGE_DEFAULT;
 
-    *texture = std::make_shared<Texture2D>();
-    HRESULT hr = (*texture)->Initialize(Device, td, pixelData.get());
+    HRESULT hr = Graphics->CreateTexture2D(td, pixelData.get(), texture);
     CHECKHR(hr);
 
     return S_OK;

@@ -1,6 +1,6 @@
 #include "Precomp.h"
 #include "ShaderPass.h"
-#include "RenderVisual.h"
+#include "Scene/RenderVisual.h"
 #include "VertexBuffer.h"
 #include "VertexFormats.h"
 #include "IndexBuffer.h"
@@ -11,6 +11,34 @@ ShaderPass::ShaderPass()
 
 ShaderPass::~ShaderPass()
 {
+    for (int i = 0; i < _countof(RenderTargets); ++i)
+    {
+        if (RenderTargets[i]) RenderTargets[i]->Release();
+        RenderTargets[i] = nullptr;
+    }
+
+    assert(_countof(VSConstants) == _countof(PSConstants));
+
+    for (int i = 0; i < _countof(VSConstants); ++i)
+    {
+        if (VSConstants[i]) VSConstants[i]->Release();
+        VSConstants[i] = nullptr;
+
+        if (PSConstants[i]) PSConstants[i]->Release();
+        PSConstants[i] = nullptr;
+    }
+
+    assert(_countof(VSResources) == _countof(PSResources));
+
+    for (int i = 0; i < _countof(VSResources); ++i)
+    {
+        if (VSResources[i]) VSResources[i]->Release();
+        VSResources[i] = nullptr;
+
+        if (PSResources[i]) PSResources[i]->Release();
+        PSResources[i] = nullptr;
+    }
+
     assert(_countof(VSSamplers) == _countof(PSSamplers));
 
     for (int i = 0; i < _countof(VSSamplers); ++i)
@@ -20,23 +48,6 @@ ShaderPass::~ShaderPass()
 
         if (PSSamplers[i]) PSSamplers[i]->Release();
         PSSamplers[i] = nullptr;
-    }
-
-    assert(_countof(VSResources) == _countof(PSResources));
-
-    for (int i = 0; i < _countof(VSSamplers); ++i)
-    {
-        if (VSResources[i]) VSResources[i]->Release();
-        VSResources[i] = nullptr;
-
-        if (PSResources[i]) PSResources[i]->Release();
-        PSResources[i] = nullptr;
-    }
-
-    for (int i = 0; i < _countof(RenderTargets); ++i)
-    {
-        if (RenderTargets[i]) RenderTargets[i]->Release();
-        RenderTargets[i] = nullptr;
     }
 }
 
@@ -67,6 +78,9 @@ HRESULT ShaderPass::InitializeGraphics(
 
 void ShaderPass::SetRenderTarget(int slot, const ComPtr<ID3D11RenderTargetView>& rtv)
 {
+    // can't change RT while rendering
+    assert(!Rendering);
+
     assert(slot >= 0 && slot < _countof(RenderTargets));
 
     if (RenderTargets[slot]) RenderTargets[slot]->Release();
@@ -78,6 +92,9 @@ void ShaderPass::SetRenderTarget(int slot, const ComPtr<ID3D11RenderTargetView>&
 
 void ShaderPass::SetViewport(const D3D11_VIEWPORT* viewport)
 {
+    // can't change viewport while rendering
+    assert(!Rendering);
+
     if (viewport)
     {
         Viewport = *viewport;
@@ -105,12 +122,50 @@ void ShaderPass::SetViewport(const D3D11_VIEWPORT* viewport)
 
 void ShaderPass::SetDepthBuffer(const ComPtr<ID3D11DepthStencilView>& dsv)
 {
+    // can't change depth buffer while rendering
+    assert(!Rendering);
+
     DepthBuffer = dsv;
 }
 
 void ShaderPass::SetDepthState(const ComPtr<ID3D11DepthStencilState>& depthState)
 {
+    // can't change depth state while rendering
+    assert(!Rendering);
+
     DepthState = depthState;
+}
+
+void ShaderPass::SetVSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb)
+{
+    assert(slot >= 0 && slot < _countof(VSConstants));
+
+    if (VSConstants[slot]) VSConstants[slot]->Release();
+
+    VSConstants[slot] = cb.Get();
+
+    if (VSConstants[slot]) VSConstants[slot]->AddRef();
+
+    if (Rendering)
+    {
+        Context->VSSetConstantBuffers(slot, 1, cb.GetAddressOf());
+    }
+}
+
+void ShaderPass::SetPSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb)
+{
+    assert(slot >= 0 && slot < _countof(PSConstants));
+
+    if (PSConstants[slot]) PSConstants[slot]->Release();
+
+    PSConstants[slot] = cb.Get();
+
+    if (PSConstants[slot]) PSConstants[slot]->AddRef();
+
+    if (Rendering)
+    {
+        Context->PSSetConstantBuffers(slot, 1, cb.GetAddressOf());
+    }
 }
 
 void ShaderPass::SetVSResource(int slot, const ComPtr<ID3D11ShaderResourceView>& srv)
@@ -122,6 +177,11 @@ void ShaderPass::SetVSResource(int slot, const ComPtr<ID3D11ShaderResourceView>&
     VSResources[slot] = srv.Get();
 
     if (VSResources[slot]) VSResources[slot]->AddRef();
+
+    if (Rendering)
+    {
+        Context->VSSetShaderResources(slot, 1, srv.GetAddressOf());
+    }
 }
 
 void ShaderPass::SetPSResource(int slot, const ComPtr<ID3D11ShaderResourceView>& srv)
@@ -133,6 +193,11 @@ void ShaderPass::SetPSResource(int slot, const ComPtr<ID3D11ShaderResourceView>&
     PSResources[slot] = srv.Get();
 
     if (PSResources[slot]) PSResources[slot]->AddRef();
+
+    if (Rendering)
+    {
+        Context->PSSetShaderResources(slot, 1, srv.GetAddressOf());
+    }
 }
 
 void ShaderPass::SetVSSampler(int slot, const ComPtr<ID3D11SamplerState>& sampler)
@@ -144,6 +209,11 @@ void ShaderPass::SetVSSampler(int slot, const ComPtr<ID3D11SamplerState>& sample
     VSSamplers[slot] = sampler.Get();
 
     if (VSSamplers[slot]) VSSamplers[slot]->AddRef();
+
+    if (Rendering)
+    {
+        Context->VSSetSamplers(slot, 1, sampler.GetAddressOf());
+    }
 }
 
 void ShaderPass::SetPSSampler(int slot, const ComPtr<ID3D11SamplerState>& sampler)
@@ -155,6 +225,11 @@ void ShaderPass::SetPSSampler(int slot, const ComPtr<ID3D11SamplerState>& sample
     PSSamplers[slot] = sampler.Get();
 
     if (PSSamplers[slot]) PSSamplers[slot]->AddRef();
+
+    if (Rendering)
+    {
+        Context->PSSetSamplers(slot, 1, sampler.GetAddressOf());
+    }
 }
 
 void ShaderPass::Begin()
@@ -163,16 +238,18 @@ void ShaderPass::Begin()
     {
     case ShaderPassType::Graphics:
         BeginGraphics();
-        return;
+        break;
 
     case ShaderPassType::Compute:
         BeginCompute();
-        return;
+        break;
 
     default:
         assert(false);
-        break;
+        return;
     }
+
+    Rendering = true;
 }
 
 void ShaderPass::Draw(const std::shared_ptr<RenderVisual>& visual)
@@ -208,6 +285,8 @@ void ShaderPass::End()
     Context->OMSetRenderTargets(_countof(nullRTVs), nullRTVs, nullptr);
     Context->VSSetShaderResources(0, _countof(nullSRVs), nullSRVs);
     Context->PSSetShaderResources(0, _countof(nullSRVs), nullSRVs);
+
+    Rendering = false;
 }
 
 void ShaderPass::BeginGraphics()
@@ -226,10 +305,12 @@ void ShaderPass::BeginGraphics()
     Context->IASetInputLayout(InputLayouts[(uint32_t)CurrentInputBinding].Get());
 
     Context->VSSetShader(VertexShader.Get(), nullptr, 0);
+    Context->VSSetConstantBuffers(0, _countof(VSConstants), VSConstants);
     Context->VSSetShaderResources(0, _countof(VSResources), VSResources);
     Context->VSSetSamplers(0, _countof(VSSamplers), VSSamplers);
 
     Context->PSSetShader(PixelShader.Get(), nullptr, 0);
+    Context->PSSetConstantBuffers(0, _countof(PSConstants), PSConstants);
     Context->PSSetShaderResources(0, _countof(PSResources), PSResources);
     Context->PSSetSamplers(0, _countof(PSSamplers), PSSamplers);
 }

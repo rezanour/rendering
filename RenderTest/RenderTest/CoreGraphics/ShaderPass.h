@@ -35,6 +35,8 @@ public:
     void SetDepthBuffer(const ComPtr<ID3D11DepthStencilView>& dsv);
     void SetDepthState(const ComPtr<ID3D11DepthStencilState>& depthState);
 
+    void SetVSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb);
+    void SetPSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb);
     void SetVSResource(int slot, const ComPtr<ID3D11ShaderResourceView>& srv);
     void SetPSResource(int slot, const ComPtr<ID3D11ShaderResourceView>& srv);
     void SetVSSampler(int slot, const ComPtr<ID3D11SamplerState>& sampler);
@@ -52,6 +54,7 @@ private:
 
 private:
     ShaderPassType Type = ShaderPassType::Unknown;
+    bool Rendering = false;
 
     ComPtr<ID3D11Device> Device;
     ComPtr<ID3D11DeviceContext> Context;
@@ -67,6 +70,9 @@ private:
     ComPtr<ID3D11DepthStencilView> DepthBuffer;
     ComPtr<ID3D11DepthStencilState> DepthState;
     D3D11_VIEWPORT Viewport{};
+
+    ID3D11Buffer* VSConstants[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
+    ID3D11Buffer* PSConstants[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
 
     ID3D11ShaderResourceView* VSResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
     ID3D11ShaderResourceView* PSResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
