@@ -100,10 +100,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AssetLoader.cpp" />
+    <ClCompile Include="CoreGraphics\Buffer.cpp" />
     <ClCompile Include="CoreGraphics\ConstantBuffer.cpp" />
     <ClCompile Include="CoreGraphics\GraphicsDevice.cpp" />
     <ClCompile Include="CoreGraphics\IndexBuffer.cpp" />
     <ClCompile Include="MathUtil.cpp" />
+    <ClCompile Include="Renderers\ForwardPlusRenderer.cpp" />
     <ClCompile Include="Renderers\LPFRenderer.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Precomp.cpp">
@@ -122,7 +124,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CoreGraphics\BasePresenter.h" />
-    <ClInclude Include="CoreGraphics\BaseRenderer.h" />
+    <ClInclude Include="CoreGraphics\Buffer.h" />
+    <ClInclude Include="Renderers\BaseRenderer.h" />
     <ClInclude Include="AssetLoader.h" />
     <ClInclude Include="CoreGraphics\ConstantBuffer.h" />
     <ClInclude Include="CoreGraphics\GraphicsDevice.h" />
@@ -130,6 +133,7 @@
     <ClInclude Include="MathUtil.h" />
     <ClInclude Include="Precomp.h" />
     <ClInclude Include="CoreGraphics\DxgiPresenter.h" />
+    <ClInclude Include="Renderers\ForwardPlusRenderer.h" />
     <ClInclude Include="Renderers\LPFRenderer.h" />
     <ClInclude Include="CoreGraphics\RenderingCommon.h" />
     <ClInclude Include="Scene\Light.h" />
@@ -158,6 +162,20 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
+    <FxCompile Include="Shaders\FP_FinalPass_ps.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\FP_FinalPass_vs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\FP_LightCull_cs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+    </FxCompile>
     <FxCompile Include="Shaders\GBuffer_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
@@ -171,6 +189,10 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Shaders\DirectionalLight_vs.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\ZPrePass_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>

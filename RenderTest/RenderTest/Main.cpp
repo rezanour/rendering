@@ -6,6 +6,7 @@
 #include "CoreGraphics/VertexBuffer.h"
 #include "CoreGraphics/VertexFormats.h"
 #include "Renderers/LPFRenderer.h"
+#include "Renderers/ForwardPlusRenderer.h"
 #include "Scene/Scene.h"
 #include "Scene/Visual.h"
 #include "Scene/Light.h"
@@ -13,6 +14,8 @@
 #include "MathUtil.h"
 
 using namespace Microsoft::WRL;
+
+//#define USE_HEADLIGHT
 
 static const wchar_t AppClassName[] = L"RenderTest";
 static const uint32_t ClientWidth = 1280;
@@ -33,6 +36,9 @@ static std::shared_ptr<Scene> TheScene;
 static std::shared_ptr<AssetLoader> Assets;
 static RenderTarget BackBufferRT;
 static RenderView View;
+#ifdef USE_HEADLIGHT
+static std::shared_ptr<Light> Headlight;
+#endif
 
 static HRESULT AppInitialize(HINSTANCE instance);
 static LRESULT CALLBACK AppWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -162,6 +168,10 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
             forward = XMVector3Cross(right, up);
             XMStoreFloat4x4(&View.WorldToView, XMMatrixLookToLH(position, forward, up));
 
+#ifdef USE_HEADLIGHT
+            Headlight->SetOrientation(QuaternionFromViewDirection(XMVector3Normalize(forward), up));
+#endif
+
             hr = Renderer->RenderFrame(BackBufferRT, View);
             if (FAILED(hr))
             {
@@ -289,7 +299,8 @@ HRESULT GfxInitialize()
     hr = Presenter->Initialize();
     CHECKHR(hr);
 
-    Renderer = std::make_unique<LPFRenderer>(Graphics);
+    //Renderer = std::make_unique<LPFRenderer>(Graphics);
+    Renderer = std::make_unique<ForwardPlusRenderer>(Graphics);
     hr = Renderer->Initialize();
     CHECKHR(hr);
 
@@ -305,6 +316,12 @@ HRESULT GfxInitialize()
         TheScene->AddVisual(visual);
     }
 
+#ifdef USE_HEADLIGHT
+    Headlight = std::make_shared<DirectionalLight>();
+    Headlight->SetColor(XMFLOAT3(1.f, 1.f, 1.f));
+    Headlight->SetOrientation(QuaternionFromViewDirection(XMVector3Normalize(XMVectorSet(1, -1, 1, 0)), XMVectorSet(0, 1, 0, 0)));
+    TheScene->AddLight(Headlight);
+#else
     // Add some lights
     std::shared_ptr<Light> light = std::make_shared<DirectionalLight>();
     light->SetColor(XMFLOAT3(0.6f, 0.6f, 0.4f));
@@ -315,6 +332,7 @@ HRESULT GfxInitialize()
     light->SetColor(XMFLOAT3(0.4f, 0.4f, 0.6f));
     light->SetOrientation(QuaternionFromViewDirection(XMVector3Normalize(XMVectorSet(1, -1, 1, 0)), XMVectorSet(0, 1, 0, 0)));
     TheScene->AddLight(light);
+#endif
 
     Renderer->SetScene(TheScene);
 

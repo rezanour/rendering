@@ -11,29 +11,35 @@ ShaderPass::ShaderPass()
 
 ShaderPass::~ShaderPass()
 {
+    for (int i = 0; i < _countof(Buffers); ++i)
+    {
+        if (Buffers[i]) Buffers[i]->Release();
+        Buffers[i] = nullptr;
+    }
+
     for (int i = 0; i < _countof(RenderTargets); ++i)
     {
         if (RenderTargets[i]) RenderTargets[i]->Release();
         RenderTargets[i] = nullptr;
     }
 
-    assert(_countof(VSConstants) == _countof(PSConstants));
+    assert(_countof(VSCSConstants) == _countof(PSConstants));
 
-    for (int i = 0; i < _countof(VSConstants); ++i)
+    for (int i = 0; i < _countof(VSCSConstants); ++i)
     {
-        if (VSConstants[i]) VSConstants[i]->Release();
-        VSConstants[i] = nullptr;
+        if (VSCSConstants[i]) VSCSConstants[i]->Release();
+        VSCSConstants[i] = nullptr;
 
         if (PSConstants[i]) PSConstants[i]->Release();
         PSConstants[i] = nullptr;
     }
 
-    assert(_countof(VSResources) == _countof(PSResources));
+    assert(_countof(VSCSResources) == _countof(PSResources));
 
-    for (int i = 0; i < _countof(VSResources); ++i)
+    for (int i = 0; i < _countof(VSCSResources); ++i)
     {
-        if (VSResources[i]) VSResources[i]->Release();
-        VSResources[i] = nullptr;
+        if (VSCSResources[i]) VSCSResources[i]->Release();
+        VSCSResources[i] = nullptr;
 
         if (PSResources[i]) PSResources[i]->Release();
         PSResources[i] = nullptr;
@@ -65,8 +71,11 @@ HRESULT ShaderPass::InitializeGraphics(
     HRESULT hr = Device->CreateVertexShader(vertexShader, vertexShaderNumBytes, nullptr, &VertexShader);
     CHECKHR(hr);
 
-    hr = Device->CreatePixelShader(pixelShader, pixelShaderNumBytes, nullptr, &PixelShader);
-    CHECKHR(hr);
+    if (pixelShader)
+    {
+        hr = Device->CreatePixelShader(pixelShader, pixelShaderNumBytes, nullptr, &PixelShader);
+        CHECKHR(hr);
+    }
 
     hr = CreateInputLayout(format, vertexShader, vertexShaderNumBytes);
     CHECKHR(hr);
@@ -74,6 +83,34 @@ HRESULT ShaderPass::InitializeGraphics(
     CurrentInputBinding = format;
 
     return hr;
+}
+
+HRESULT ShaderPass::InitializeCompute(const ComPtr<ID3D11Device>& device, const uint8_t* computeShader, size_t computeShaderNumBytes)
+{
+    Device = device;
+    Device->GetImmediateContext(&Context);
+
+    Type = ShaderPassType::Compute;
+
+    HRESULT hr = Device->CreateComputeShader(computeShader, computeShaderNumBytes, nullptr, &ComputeShader);
+    CHECKHR(hr);
+
+    return hr;
+}
+
+void ShaderPass::SetBuffer(int slot, const ComPtr<ID3D11UnorderedAccessView>& uav, bool resetCounterEachPass)
+{
+    // can't change buffer while rendering
+    assert(!Rendering);
+
+    assert(slot >= 0 && slot < _countof(Buffers));
+
+    if (Buffers[slot]) Buffers[slot]->Release();
+
+    Buffers[slot] = uav.Get();
+    BufferCounters[slot] = resetCounterEachPass ? 0 : -1;
+
+    if (Buffers[slot]) Buffers[slot]->AddRef();
 }
 
 void ShaderPass::SetRenderTarget(int slot, const ComPtr<ID3D11RenderTargetView>& rtv)
@@ -136,15 +173,47 @@ void ShaderPass::SetDepthState(const ComPtr<ID3D11DepthStencilState>& depthState
     DepthState = depthState;
 }
 
+void ShaderPass::SetCSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb)
+{
+    assert(slot >= 0 && slot < _countof(VSCSConstants));
+
+    if (VSCSConstants[slot]) VSCSConstants[slot]->Release();
+
+    VSCSConstants[slot] = cb.Get();
+
+    if (VSCSConstants[slot]) VSCSConstants[slot]->AddRef();
+
+    if (Rendering)
+    {
+        Context->CSSetConstantBuffers(slot, 1, cb.GetAddressOf());
+    }
+}
+
+void ShaderPass::SetCSResource(int slot, const ComPtr<ID3D11ShaderResourceView>& srv)
+{
+    assert(slot >= 0 && slot < _countof(VSCSResources));
+
+    if (VSCSResources[slot]) VSCSResources[slot]->Release();
+
+    VSCSResources[slot] = srv.Get();
+
+    if (VSCSResources[slot]) VSCSResources[slot]->AddRef();
+
+    if (Rendering)
+    {
+        Context->CSSetShaderResources(slot, 1, srv.GetAddressOf());
+    }
+}
+
 void ShaderPass::SetVSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb)
 {
-    assert(slot >= 0 && slot < _countof(VSConstants));
+    assert(slot >= 0 && slot < _countof(VSCSConstants));
 
-    if (VSConstants[slot]) VSConstants[slot]->Release();
+    if (VSCSConstants[slot]) VSCSConstants[slot]->Release();
 
-    VSConstants[slot] = cb.Get();
+    VSCSConstants[slot] = cb.Get();
 
-    if (VSConstants[slot]) VSConstants[slot]->AddRef();
+    if (VSCSConstants[slot]) VSCSConstants[slot]->AddRef();
 
     if (Rendering)
     {
@@ -170,13 +239,13 @@ void ShaderPass::SetPSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb)
 
 void ShaderPass::SetVSResource(int slot, const ComPtr<ID3D11ShaderResourceView>& srv)
 {
-    assert(slot >= 0 && slot < _countof(VSResources));
+    assert(slot >= 0 && slot < _countof(VSCSResources));
 
-    if (VSResources[slot]) VSResources[slot]->Release();
+    if (VSCSResources[slot]) VSCSResources[slot]->Release();
 
-    VSResources[slot] = srv.Get();
+    VSCSResources[slot] = srv.Get();
 
-    if (VSResources[slot]) VSResources[slot]->AddRef();
+    if (VSCSResources[slot]) VSCSResources[slot]->AddRef();
 
     if (Rendering)
     {
@@ -277,11 +346,18 @@ void ShaderPass::Draw(const std::shared_ptr<Visual>& visual)
     Context->DrawIndexed(visual->GetIndexCount(), visual->GetBaseIndex(), vb->GetBaseVertex());
 }
 
+void ShaderPass::Dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ)
+{
+    Context->Dispatch(numThreadsX, numThreadsY, numThreadsZ);
+}
+
 void ShaderPass::End()
 {
     static ID3D11RenderTargetView* const nullRTVs[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT]{};
     static ID3D11ShaderResourceView* const nullSRVs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
+    static ID3D11UnorderedAccessView* const nullUAVs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
 
+    Context->CSSetUnorderedAccessViews(0, _countof(nullUAVs), nullUAVs, nullptr);
     Context->OMSetRenderTargets(_countof(nullRTVs), nullRTVs, nullptr);
     Context->VSSetShaderResources(0, _countof(nullSRVs), nullSRVs);
     Context->PSSetShaderResources(0, _countof(nullSRVs), nullSRVs);
@@ -305,18 +381,30 @@ void ShaderPass::BeginGraphics()
     Context->IASetInputLayout(InputLayouts[(uint32_t)CurrentInputBinding].Get());
 
     Context->VSSetShader(VertexShader.Get(), nullptr, 0);
-    Context->VSSetConstantBuffers(0, _countof(VSConstants), VSConstants);
-    Context->VSSetShaderResources(0, _countof(VSResources), VSResources);
+    Context->VSSetConstantBuffers(0, _countof(VSCSConstants), VSCSConstants);
+    Context->VSSetShaderResources(0, _countof(VSCSResources), VSCSResources);
     Context->VSSetSamplers(0, _countof(VSSamplers), VSSamplers);
 
     Context->PSSetShader(PixelShader.Get(), nullptr, 0);
-    Context->PSSetConstantBuffers(0, _countof(PSConstants), PSConstants);
-    Context->PSSetShaderResources(0, _countof(PSResources), PSResources);
-    Context->PSSetSamplers(0, _countof(PSSamplers), PSSamplers);
+    if (PixelShader)
+    {
+        Context->PSSetConstantBuffers(0, _countof(PSConstants), PSConstants);
+        Context->PSSetShaderResources(0, _countof(PSResources), PSResources);
+        Context->PSSetSamplers(0, _countof(PSSamplers), PSSamplers);
+    }
+
+    Context->CSSetShader(nullptr, nullptr, 0);
 }
 
 void ShaderPass::BeginCompute()
 {
+    Context->VSSetShader(nullptr, nullptr, 0);
+    Context->PSSetShader(nullptr, nullptr, 0);
+
+    Context->CSSetShader(ComputeShader.Get(), nullptr, 0);
+    Context->CSSetUnorderedAccessViews(0, _countof(Buffers), Buffers, BufferCounters);
+    Context->CSSetConstantBuffers(0, _countof(VSCSConstants), VSCSConstants);
+    Context->CSSetShaderResources(0, _countof(VSCSResources), VSCSResources);
 }
 
 HRESULT ShaderPass::CreateInputLayout(VertexFormat format, const uint8_t* vertexShader, size_t vertexShaderBytes)

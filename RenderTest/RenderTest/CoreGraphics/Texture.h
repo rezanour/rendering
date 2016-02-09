@@ -41,9 +41,9 @@ public:
     Texture2D();
     virtual ~Texture2D();
 
-    virtual HRESULT Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TEXTURE2D_DESC& desc);
-    virtual HRESULT Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TEXTURE2D_DESC& desc, const void* data);
-    virtual HRESULT WrapExisting(const ComPtr<ID3D11Texture2D>& existing);
+    HRESULT Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT rtvFormat, DXGI_FORMAT srvFormat, DXGI_FORMAT dsvFormat);
+    HRESULT Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT rtvFormat, DXGI_FORMAT srvFormat, DXGI_FORMAT dsvFormat, const void* data);
+    HRESULT WrapExisting(const ComPtr<ID3D11Texture2D>& existing);
 
     const D3D11_TEXTURE2D_DESC& GetDesc() const
     {
@@ -56,7 +56,7 @@ public:
     }
 
 private:
-    HRESULT CreateViews(const ComPtr<ID3D11Device>& device);
+    HRESULT CreateViews(const ComPtr<ID3D11Device>& device, DXGI_FORMAT rtvFormat, DXGI_FORMAT srvFormat, DXGI_FORMAT dsvFormat);
 
 private:
     D3D11_TEXTURE2D_DESC Desc;

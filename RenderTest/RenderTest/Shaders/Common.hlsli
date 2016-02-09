@@ -50,6 +50,16 @@ struct FinalPassVSOutput
     float2 TexCoord : TEXCOORD;
 };
 
+// Forward+ final pass vs output
+struct FPFinalPassVSOutput
+{
+    float4 Position : SV_POSITION;
+    float3 ViewPosition : POSITION;
+    float3 ViewNormal : NORMAL;
+    float3 ViewTangent : TANGENT;
+    float3 ViewBiTangent : BITANGENT;
+    float2 TexCoord : TEXCOORD;
+};
 
 //
 // Utility functions

@@ -87,6 +87,12 @@
     <ClCompile Include="MathUtil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Renderers\ForwardPlusRenderer.cpp">
+      <Filter>Source Files\Renderers</Filter>
+    </ClCompile>
+    <ClCompile Include="CoreGraphics\Buffer.cpp">
+      <Filter>Source Files\CoreGraphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Precomp.h">
@@ -102,9 +108,6 @@
       <Filter>Header Files\Scene</Filter>
     </ClInclude>
     <ClInclude Include="CoreGraphics\BasePresenter.h">
-      <Filter>Header Files\CoreGraphics</Filter>
-    </ClInclude>
-    <ClInclude Include="CoreGraphics\BaseRenderer.h">
       <Filter>Header Files\CoreGraphics</Filter>
     </ClInclude>
     <ClInclude Include="CoreGraphics\ConstantBuffer.h">
@@ -146,6 +149,15 @@
     <ClInclude Include="MathUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Renderers\ForwardPlusRenderer.h">
+      <Filter>Header Files\Renderers</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderers\BaseRenderer.h">
+      <Filter>Header Files\Renderers</Filter>
+    </ClInclude>
+    <ClInclude Include="CoreGraphics\Buffer.h">
+      <Filter>Header Files\CoreGraphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\DirectionalLight_MSAAx4_ps.hlsl">
@@ -170,6 +182,18 @@
       <Filter>Resource Files\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\GBuffer_vs.hlsl">
+      <Filter>Resource Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ZPrePass_vs.hlsl">
+      <Filter>Resource Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\FP_FinalPass_vs.hlsl">
+      <Filter>Resource Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\FP_FinalPass_ps.hlsl">
+      <Filter>Resource Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\FP_LightCull_cs.hlsl">
       <Filter>Resource Files\Shaders</Filter>
     </FxCompile>
   </ItemGroup>

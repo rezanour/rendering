@@ -32,11 +32,13 @@ public:
 
     // Texture creation
     HRESULT CreateTexture2D(const D3D11_TEXTURE2D_DESC& desc, std::shared_ptr<Texture2D>* texture);
+    HRESULT CreateTexture2D(const D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT rtvFormat, DXGI_FORMAT srvFormat, DXGI_FORMAT dsvFormat, std::shared_ptr<Texture2D>* texture);
     HRESULT CreateTexture2D(const D3D11_TEXTURE2D_DESC& desc, const void* initData, std::shared_ptr<Texture2D>* texture);
     HRESULT CreateTexture2D(const ComPtr<ID3D11Texture2D>& existing, std::shared_ptr<Texture2D>* texture);
 
     // Common pipeline state objects
     const ComPtr<ID3D11SamplerState>& GetLinearWrapSampler() const;
+    const ComPtr<ID3D11SamplerState>& GetAnisoWrapSampler() const;
     const ComPtr<ID3D11SamplerState>& GetPointClampSampler() const;
     const ComPtr<ID3D11DepthStencilState>& GetDepthWriteState() const;
     const ComPtr<ID3D11DepthStencilState>& GetDepthReadState() const;
@@ -49,6 +51,7 @@ private:
 
     // Common states
     ComPtr<ID3D11SamplerState> LinearWrapSampler;
+    ComPtr<ID3D11SamplerState> AnisoWrapSampler;
     ComPtr<ID3D11SamplerState> PointClampSampler;
     ComPtr<ID3D11DepthStencilState> DepthWriteState;
     ComPtr<ID3D11DepthStencilState> DepthReadState;

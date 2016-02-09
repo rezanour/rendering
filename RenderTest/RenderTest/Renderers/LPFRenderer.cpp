@@ -23,7 +23,7 @@
 #include "Shaders/FinalPass_MSAAx4_ps.h"
 
 LPFRenderer::LPFRenderer(const std::shared_ptr<GraphicsDevice>& graphics)
-    : BaseRenderer(graphics)
+    : BaseRenderer(graphics, true)
 {
     Context = graphics->GetContext();
 }
@@ -34,7 +34,6 @@ LPFRenderer::~LPFRenderer()
 
 HRESULT LPFRenderer::Initialize()
 {
-    // GBuffer Pass
     HRESULT hr = Graphics->CreateShaderPassGraphics(VertexFormat::Basic3D, GBuffer_vs, sizeof(GBuffer_vs), GBuffer_ps, sizeof(GBuffer_ps), &GBufferPass);
     CHECKHR(hr);
 
@@ -109,14 +108,20 @@ HRESULT LPFRenderer::Initialize()
     hr = QuadVisual->Initialize(vb, ib, 0, _countof(indices));
     CHECKHR(hr);
 
-    hr = RecreateSurfaces(MsaaEnabled ? 4 : 1);
-    CHECKHR(hr);
-
     return hr;
 }
 
 HRESULT LPFRenderer::RenderFrame(const RenderTarget& renderTarget, const RenderView& view)
 {
+    HRESULT hr = S_OK;
+
+    if (RTWidth != renderTarget.Texture->GetDesc().Width ||
+        RTHeight != renderTarget.Texture->GetDesc().Height)
+    {
+        hr = RecreateSurfaces(renderTarget.Texture->GetDesc().Width, renderTarget.Texture->GetDesc().Height, MsaaEnabled ? 4 : 1);
+        CHECKHR(hr);
+    }
+
     // Scene traversal once, used for multiple passes
     Scene->GetVisibleVisuals(view, &Visuals);
     Scene->GetVisibleLights(view, &Lights);
@@ -126,68 +131,6 @@ HRESULT LPFRenderer::RenderFrame(const RenderTarget& renderTarget, const RenderV
     RenderFinal(view, renderTarget);
 
     return S_OK;
-}
-
-HRESULT LPFRenderer::RecreateSurfaces(uint32_t sampleCount)
-{
-    GBufferViewNormalsRT = nullptr;
-    GBufferLinearDepthRT = nullptr;
-    GBufferDepthBuffer = nullptr;
-    LightRT = nullptr;
-    FinalRT = nullptr;
-
-    D3D11_TEXTURE2D_DESC desc{};
-    desc.ArraySize = 1;
-    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    desc.Width = 1280;
-    desc.Height = 720;
-    desc.MipLevels = 1;
-    desc.SampleDesc.Count = sampleCount;
-    desc.Usage = D3D11_USAGE_DEFAULT;
-
-    Viewport.Width = static_cast<float>(desc.Width);
-    Viewport.Height = static_cast<float>(desc.Height);
-    Viewport.MaxDepth = 1.f;
-
-    HRESULT hr = Graphics->CreateTexture2D(desc, &GBufferViewNormalsRT);
-    CHECKHR(hr);
-
-    hr = Graphics->CreateTexture2D(desc, &LightRT);
-    CHECKHR(hr);
-
-    if (sampleCount > 1)
-    {
-        hr = Graphics->CreateTexture2D(desc, &FinalRT);
-        CHECKHR(hr);
-    }
-
-    desc.Format = DXGI_FORMAT_R32_FLOAT;
-    hr = Graphics->CreateTexture2D(desc, &GBufferLinearDepthRT);
-    CHECKHR(hr);
-
-    desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-    desc.Format = DXGI_FORMAT_D32_FLOAT;
-    hr = Graphics->CreateTexture2D(desc, &GBufferDepthBuffer);
-    CHECKHR(hr);
-
-    GBufferPass->SetRenderTarget(0, GBufferViewNormalsRT->GetRTV());
-    GBufferPass->SetRenderTarget(1, GBufferLinearDepthRT->GetRTV());
-    GBufferPass->SetDepthBuffer(GBufferDepthBuffer->GetDSV());
-    DLightPass->SetPSResource(0, GBufferViewNormalsRT->GetSRV());
-    DLightPass->SetPSResource(1, GBufferLinearDepthRT->GetSRV());
-    DLightPass->SetRenderTarget(0, LightRT->GetRTV());
-    DLightPassMsaa->SetPSResource(0, GBufferViewNormalsRT->GetSRV());
-    DLightPassMsaa->SetPSResource(1, GBufferLinearDepthRT->GetSRV());
-    DLightPassMsaa->SetRenderTarget(0, LightRT->GetRTV());
-    FinalPass->SetPSResource(0, LightRT->GetSRV());
-    FinalPass->SetRenderTarget(0, FinalRT ? FinalRT->GetRTV() : nullptr);
-    FinalPass->SetDepthBuffer(GBufferDepthBuffer->GetDSV());
-    FinalPassMsaa->SetPSResource(0, LightRT->GetSRV());
-    FinalPassMsaa->SetRenderTarget(0, FinalRT ? FinalRT->GetRTV() : nullptr);
-    FinalPassMsaa->SetDepthBuffer(GBufferDepthBuffer->GetDSV());
-
-    return hr;
 }
 
 void LPFRenderer::RenderGBuffer(const RenderView& view)
@@ -303,6 +246,71 @@ void LPFRenderer::RenderFinal(const RenderView& view, const RenderTarget& render
     pass->End();
     if (MsaaEnabled)
     {
-        Context->ResolveSubresource(renderTarget.Texture->GetTexture().Get(), 0, FinalRT->GetTexture().Get(), 0, renderTarget.Texture->GetDesc().Format);
+        Context->ResolveSubresource(renderTarget.Texture->GetTexture().Get(), 0, FinalRTMsaa->GetTexture().Get(), 0, renderTarget.Texture->GetDesc().Format);
     }
 }
+
+HRESULT LPFRenderer::RecreateSurfaces(uint32_t width, uint32_t height, uint32_t sampleCount)
+{
+    GBufferViewNormalsRT = nullptr;
+    GBufferLinearDepthRT = nullptr;
+    GBufferDepthBuffer = nullptr;
+    LightRT = nullptr;
+    FinalRTMsaa = nullptr;
+
+    D3D11_TEXTURE2D_DESC desc{};
+    desc.ArraySize = 1;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.SampleDesc.Count = sampleCount;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+
+    Viewport.Width = static_cast<float>(desc.Width);
+    Viewport.Height = static_cast<float>(desc.Height);
+    Viewport.MaxDepth = 1.f;
+
+    HRESULT hr = Graphics->CreateTexture2D(desc, &GBufferViewNormalsRT);
+    CHECKHR(hr);
+
+    hr = Graphics->CreateTexture2D(desc, &LightRT);
+    CHECKHR(hr);
+
+    if (sampleCount > 1)
+    {
+        hr = Graphics->CreateTexture2D(desc, &FinalRTMsaa);
+        CHECKHR(hr);
+    }
+
+    desc.Format = DXGI_FORMAT_R32_FLOAT;
+    hr = Graphics->CreateTexture2D(desc, &GBufferLinearDepthRT);
+    CHECKHR(hr);
+
+    desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    desc.Format = DXGI_FORMAT_D32_FLOAT;
+    hr = Graphics->CreateTexture2D(desc, &GBufferDepthBuffer);
+    CHECKHR(hr);
+
+    RTWidth = width;
+    RTHeight = height;
+
+    GBufferPass->SetRenderTarget(0, GBufferViewNormalsRT->GetRTV());
+    GBufferPass->SetRenderTarget(1, GBufferLinearDepthRT->GetRTV());
+    GBufferPass->SetDepthBuffer(GBufferDepthBuffer->GetDSV());
+    DLightPass->SetPSResource(0, GBufferViewNormalsRT->GetSRV());
+    DLightPass->SetPSResource(1, GBufferLinearDepthRT->GetSRV());
+    DLightPass->SetRenderTarget(0, LightRT->GetRTV());
+    DLightPassMsaa->SetPSResource(0, GBufferViewNormalsRT->GetSRV());
+    DLightPassMsaa->SetPSResource(1, GBufferLinearDepthRT->GetSRV());
+    DLightPassMsaa->SetRenderTarget(0, LightRT->GetRTV());
+    FinalPass->SetPSResource(0, LightRT->GetSRV());
+    FinalPass->SetDepthBuffer(GBufferDepthBuffer->GetDSV());
+    FinalPassMsaa->SetPSResource(0, LightRT->GetSRV());
+    FinalPassMsaa->SetDepthBuffer(GBufferDepthBuffer->GetDSV());
+    FinalPassMsaa->SetRenderTarget(0, FinalRTMsaa ? FinalRTMsaa->GetRTV() : nullptr);
+
+    return hr;
+}
+

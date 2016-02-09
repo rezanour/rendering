@@ -44,6 +44,12 @@ HRESULT GraphicsDevice::Initialize(const ComPtr<IDXGIFactory2>& factory, const C
     hr = Device->CreateSamplerState(&sd, &PointClampSampler);
     CHECKHR(hr);
 
+    sd.AddressU = sd.AddressV = sd.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.Filter = D3D11_FILTER_ANISOTROPIC;
+    sd.MaxAnisotropy = 8;
+    hr = Device->CreateSamplerState(&sd, &AnisoWrapSampler);
+    CHECKHR(hr);
+
     D3D11_DEPTH_STENCIL_DESC dsd{};
     dsd.DepthEnable = TRUE;
     dsd.DepthFunc = D3D11_COMPARISON_LESS;
@@ -88,10 +94,17 @@ HRESULT GraphicsDevice::CreateShaderPassGraphics(VertexFormat format, const uint
 
 HRESULT GraphicsDevice::CreateShaderPassCompute(const uint8_t* computeShader, size_t computeShaderNumBytes, std::shared_ptr<ShaderPass>* shaderPass)
 {
-    UNREFERENCED_PARAMETER(computeShader);
-    UNREFERENCED_PARAMETER(computeShaderNumBytes);
-    UNREFERENCED_PARAMETER(shaderPass);
-    return E_NOTIMPL;
+    if (!shaderPass)
+    {
+        assert(false);
+        return E_POINTER;
+    }
+
+    *shaderPass = std::make_shared<ShaderPass>();
+    HRESULT hr = (*shaderPass)->InitializeCompute(Device, computeShader, computeShaderNumBytes);
+    CHECKHR(hr);
+
+    return hr;
 }
 
 HRESULT GraphicsDevice::CreateVertexBuffer(VertexFormat format, const void* data, uint32_t dataSizeInBytes, std::shared_ptr<VertexBuffer>* vertexBuffer)
@@ -148,7 +161,22 @@ HRESULT GraphicsDevice::CreateTexture2D(const D3D11_TEXTURE2D_DESC& desc, std::s
     }
 
     *texture = std::make_shared<Texture2D>();
-    HRESULT hr = (*texture)->Initialize(Device, desc);
+    HRESULT hr = (*texture)->Initialize(Device, desc, desc.Format, desc.Format, desc.Format);
+    CHECKHR(hr);
+
+    return hr;
+}
+
+HRESULT GraphicsDevice::CreateTexture2D(const D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT rtvFormat, DXGI_FORMAT srvFormat, DXGI_FORMAT dsvFormat, std::shared_ptr<Texture2D>* texture)
+{
+    if (!texture)
+    {
+        assert(false);
+        return E_POINTER;
+    }
+
+    *texture = std::make_shared<Texture2D>();
+    HRESULT hr = (*texture)->Initialize(Device, desc, rtvFormat, srvFormat, dsvFormat);
     CHECKHR(hr);
 
     return hr;
@@ -163,7 +191,7 @@ HRESULT GraphicsDevice::CreateTexture2D(const D3D11_TEXTURE2D_DESC& desc, const 
     }
 
     *texture = std::make_shared<Texture2D>();
-    HRESULT hr = (*texture)->Initialize(Device, desc, initData);
+    HRESULT hr = (*texture)->Initialize(Device, desc, desc.Format, desc.Format, desc.Format, initData);
     CHECKHR(hr);
 
     return hr;
@@ -187,6 +215,11 @@ HRESULT GraphicsDevice::CreateTexture2D(const ComPtr<ID3D11Texture2D>& existing,
 const ComPtr<ID3D11SamplerState>& GraphicsDevice::GetLinearWrapSampler() const
 {
     return LinearWrapSampler;
+}
+
+const ComPtr<ID3D11SamplerState>& GraphicsDevice::GetAnisoWrapSampler() const
+{
+    return AnisoWrapSampler;
 }
 
 const ComPtr<ID3D11SamplerState>& GraphicsDevice::GetPointClampSampler() const

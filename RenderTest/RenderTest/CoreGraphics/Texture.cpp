@@ -18,12 +18,12 @@ Texture2D::~Texture2D()
 {
 }
 
-HRESULT Texture2D::Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TEXTURE2D_DESC& desc)
+HRESULT Texture2D::Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT rtvFormat, DXGI_FORMAT srvFormat, DXGI_FORMAT dsvFormat)
 {
-    return Initialize(device, desc, nullptr);
+    return Initialize(device, desc, rtvFormat, srvFormat, dsvFormat, nullptr);
 }
 
-HRESULT Texture2D::Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TEXTURE2D_DESC& desc, const void* data)
+HRESULT Texture2D::Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT rtvFormat, DXGI_FORMAT srvFormat, DXGI_FORMAT dsvFormat, const void* data)
 {
     Texture = nullptr;
     SRV = nullptr;
@@ -74,7 +74,7 @@ HRESULT Texture2D::Initialize(const ComPtr<ID3D11Device>& device, const D3D11_TE
         CHECKHR(hr);
     }
 
-    hr = CreateViews(device);
+    hr = CreateViews(device, rtvFormat, srvFormat, dsvFormat);
     CHECKHR(hr);
 
     return hr;
@@ -93,25 +93,32 @@ HRESULT Texture2D::WrapExisting(const ComPtr<ID3D11Texture2D>& texture)
     ComPtr<ID3D11Device> device;
     texture->GetDevice(&device);
 
-    HRESULT hr = CreateViews(device);
+    HRESULT hr = CreateViews(device, Desc.Format, Desc.Format, Desc.Format);
     CHECKHR(hr);
 
     return hr;
 }
 
-HRESULT Texture2D::CreateViews(const ComPtr<ID3D11Device>& device)
+HRESULT Texture2D::CreateViews(const ComPtr<ID3D11Device>& device, DXGI_FORMAT rtvFormat, DXGI_FORMAT srvFormat, DXGI_FORMAT dsvFormat)
 {
     HRESULT hr = S_OK;
 
     if (Desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
     {
-        hr = device->CreateShaderResourceView(Texture.Get(), nullptr, &SRV);
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvd{};
+        srvd.ViewDimension = Desc.SampleDesc.Count > 1 ? D3D11_SRV_DIMENSION_TEXTURE2DMS : D3D11_SRV_DIMENSION_TEXTURE2D;
+        srvd.Format = srvFormat;
+        srvd.Texture2D.MipLevels = (UINT)-1;
+        hr = device->CreateShaderResourceView(Texture.Get(), &srvd, &SRV);
         CHECKHR(hr);
     }
 
     if (Desc.BindFlags & D3D11_BIND_RENDER_TARGET)
     {
-        hr = device->CreateRenderTargetView(Texture.Get(), nullptr, &RTV);
+        D3D11_RENDER_TARGET_VIEW_DESC rtvd{};
+        rtvd.ViewDimension = Desc.SampleDesc.Count > 1 ? D3D11_RTV_DIMENSION_TEXTURE2DMS : D3D11_RTV_DIMENSION_TEXTURE2D;
+        rtvd.Format = rtvFormat;
+        hr = device->CreateRenderTargetView(Texture.Get(), &rtvd, &RTV);
         CHECKHR(hr);
     }
 
@@ -123,7 +130,10 @@ HRESULT Texture2D::CreateViews(const ComPtr<ID3D11Device>& device)
 
     if (Desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
     {
-        hr = device->CreateDepthStencilView(Texture.Get(), nullptr, &DSV);
+        D3D11_DEPTH_STENCIL_VIEW_DESC dsvd{};
+        dsvd.ViewDimension = Desc.SampleDesc.Count > 1 ? D3D11_DSV_DIMENSION_TEXTURE2DMS : D3D11_DSV_DIMENSION_TEXTURE2D;
+        dsvd.Format = dsvFormat;
+        hr = device->CreateDepthStencilView(Texture.Get(), &dsvd, &DSV);
         CHECKHR(hr);
     }
 

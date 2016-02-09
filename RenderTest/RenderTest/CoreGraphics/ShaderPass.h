@@ -28,6 +28,10 @@ public:
         const uint8_t* vertexShader, size_t vertexShaderNumBytes,
         const uint8_t* pixelShader, size_t pixelShaderNumBytes);
 
+    HRESULT InitializeCompute(const ComPtr<ID3D11Device>& device, const uint8_t* computeShader, size_t computeShaderNumBytes);
+
+    void SetBuffer(int slot, const ComPtr<ID3D11UnorderedAccessView>& uav, bool resetCounterEachPass);
+
     void SetRenderTarget(int slot, const ComPtr<ID3D11RenderTargetView>& rtv);
     // Passing nullptr clears viewport to "full size"
     void SetViewport(const D3D11_VIEWPORT* viewport);
@@ -35,6 +39,8 @@ public:
     void SetDepthBuffer(const ComPtr<ID3D11DepthStencilView>& dsv);
     void SetDepthState(const ComPtr<ID3D11DepthStencilState>& depthState);
 
+    void SetCSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb);
+    void SetCSResource(int slot, const ComPtr<ID3D11ShaderResourceView>& srv);
     void SetVSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb);
     void SetPSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb);
     void SetVSResource(int slot, const ComPtr<ID3D11ShaderResourceView>& srv);
@@ -44,6 +50,7 @@ public:
 
     void Begin();
     void Draw(const std::shared_ptr<Visual>& visual);
+    void Dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ);
     void End();
 
 private:
@@ -66,15 +73,18 @@ private:
     ComPtr<ID3D11PixelShader> PixelShader;
     ComPtr<ID3D11ComputeShader> ComputeShader;
 
+    ID3D11UnorderedAccessView* Buffers[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
+    uint32_t BufferCounters[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
+
     ID3D11RenderTargetView* RenderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT]{};
     ComPtr<ID3D11DepthStencilView> DepthBuffer;
     ComPtr<ID3D11DepthStencilState> DepthState;
     D3D11_VIEWPORT Viewport{};
 
-    ID3D11Buffer* VSConstants[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
+    ID3D11Buffer* VSCSConstants[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
     ID3D11Buffer* PSConstants[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
 
-    ID3D11ShaderResourceView* VSResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
+    ID3D11ShaderResourceView* VSCSResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
     ID3D11ShaderResourceView* PSResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
 
     ID3D11SamplerState* VSSamplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT]{};

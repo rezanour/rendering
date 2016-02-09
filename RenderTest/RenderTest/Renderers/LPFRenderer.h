@@ -1,11 +1,10 @@
 #pragma once
 
-#include "CoreGraphics/BaseRenderer.h"
 #include "CoreGraphics/RenderingCommon.h"
+#include "BaseRenderer.h"
 
 class Visual;
 class Light;
-class VertexBuffer;
 class ConstantBuffer;
 class ShaderPass;
 
@@ -18,41 +17,22 @@ public:
 
     virtual HRESULT Initialize() override;
 
-    virtual bool IsMsaaEnabled() const override
-    {
-        return MsaaEnabled;
-    }
-
-    virtual HRESULT EnableMsaa(bool enable) override
-    {
-        MsaaEnabled = enable;
-        return RecreateSurfaces(MsaaEnabled ? 4 : 1);
-    }
-
-    virtual void SetScene(const std::shared_ptr<Scene>& scene) override
-    {
-        Scene = scene;
-    }
-
     virtual HRESULT RenderFrame(const RenderTarget& renderTarget, const RenderView& view) override;
 
 private:
-    HRESULT RecreateSurfaces(uint32_t sampleCount);
-
     void RenderGBuffer(const RenderView& view);
     void RenderLights(const RenderView& view);
     void RenderFinal(const RenderView& view, const RenderTarget& renderTarget);
 
+    HRESULT RecreateSurfaces(uint32_t width, uint32_t height, uint32_t sampleCount);
+
 private:
     ComPtr<ID3D11DeviceContext> Context;
-    std::shared_ptr<Scene> Scene;
+    D3D11_VIEWPORT Viewport{};
 
     // scratch buffers used to cache results throughout the frame
     std::vector<std::shared_ptr<Visual>> Visuals;
     std::vector<std::shared_ptr<Light>> Lights;
-
-    bool MsaaEnabled = true;
-    D3D11_VIEWPORT Viewport{};
 
     // GBuffer pass
     struct GBufferVSConstants
@@ -102,5 +82,5 @@ private:
     // Final pass (TODO: should really be per-object materials)
     std::shared_ptr<ShaderPass> FinalPass;
     std::shared_ptr<ShaderPass> FinalPassMsaa;
-    std::shared_ptr<Texture2D> FinalRT;
+    std::shared_ptr<Texture2D> FinalRTMsaa;
 };
