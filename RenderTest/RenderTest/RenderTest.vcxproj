@@ -103,6 +103,7 @@
     <ClCompile Include="CoreGraphics\ConstantBuffer.cpp" />
     <ClCompile Include="CoreGraphics\GraphicsDevice.cpp" />
     <ClCompile Include="CoreGraphics\IndexBuffer.cpp" />
+    <ClCompile Include="MathUtil.cpp" />
     <ClCompile Include="Renderers\LPFRenderer.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Precomp.cpp">
@@ -110,10 +111,12 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="CoreGraphics\DxgiPresenter.cpp" />
-    <ClCompile Include="Scene\RenderScene.cpp" />
+    <ClCompile Include="Scene\Light.cpp" />
+    <ClCompile Include="Scene\Object.cpp" />
+    <ClCompile Include="Scene\Scene.cpp" />
     <ClCompile Include="CoreGraphics\ShaderPass.cpp" />
     <ClCompile Include="CoreGraphics\Texture.cpp" />
-    <ClCompile Include="Scene\RenderVisual.cpp" />
+    <ClCompile Include="Scene\Visual.cpp" />
     <ClCompile Include="CoreGraphics\VertexBuffer.cpp" />
     <ClCompile Include="CoreGraphics\VertexFormats.cpp" />
   </ItemGroup>
@@ -124,12 +127,15 @@
     <ClInclude Include="CoreGraphics\ConstantBuffer.h" />
     <ClInclude Include="CoreGraphics\GraphicsDevice.h" />
     <ClInclude Include="CoreGraphics\IndexBuffer.h" />
+    <ClInclude Include="MathUtil.h" />
     <ClInclude Include="Precomp.h" />
     <ClInclude Include="CoreGraphics\DxgiPresenter.h" />
     <ClInclude Include="Renderers\LPFRenderer.h" />
     <ClInclude Include="CoreGraphics\RenderingCommon.h" />
-    <ClInclude Include="Scene\RenderScene.h" />
-    <ClInclude Include="Scene\RenderVisual.h" />
+    <ClInclude Include="Scene\Light.h" />
+    <ClInclude Include="Scene\Object.h" />
+    <ClInclude Include="Scene\Scene.h" />
+    <ClInclude Include="Scene\Visual.h" />
     <ClInclude Include="CoreGraphics\ShaderPass.h" />
     <ClInclude Include="CoreGraphics\Texture.h" />
     <ClInclude Include="CoreGraphics\VertexBuffer.h" />

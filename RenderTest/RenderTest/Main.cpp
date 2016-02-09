@@ -6,9 +6,11 @@
 #include "CoreGraphics/VertexBuffer.h"
 #include "CoreGraphics/VertexFormats.h"
 #include "Renderers/LPFRenderer.h"
-#include "Scene/RenderScene.h"
-#include "Scene/RenderVisual.h"
+#include "Scene/Scene.h"
+#include "Scene/Visual.h"
+#include "Scene/Light.h"
 #include "AssetLoader.h"
+#include "MathUtil.h"
 
 using namespace Microsoft::WRL;
 
@@ -27,9 +29,8 @@ static ComPtr<IDXGIFactory2> Factory;
 static std::shared_ptr<GraphicsDevice> Graphics;
 static std::unique_ptr<BasePresenter> Presenter;
 static std::unique_ptr<BaseRenderer> Renderer;
-static std::shared_ptr<RenderScene> Scene;
+static std::shared_ptr<Scene> TheScene;
 static std::shared_ptr<AssetLoader> Assets;
-static std::vector<std::shared_ptr<RenderVisual>> Visuals;
 static RenderTarget BackBufferRT;
 static RenderView View;
 
@@ -292,18 +293,30 @@ HRESULT GfxInitialize()
     hr = Renderer->Initialize();
     CHECKHR(hr);
 
-    Scene = std::make_shared<RenderScene>();
+    TheScene = std::make_shared<Scene>();
 
+    std::vector<std::shared_ptr<Visual>> visuals;
     Assets = std::make_shared<AssetLoader>(Graphics, L"..\\ProcessedContent");
-    hr = Assets->LoadModel(L"crytek-sponza\\sponza.model", &Visuals);
+    hr = Assets->LoadModel(L"crytek-sponza\\sponza.model", &visuals);
     CHECKHR(hr);
 
-    for (auto& visual : Visuals)
+    for (auto& visual : visuals)
     {
-        Scene->AddVisual(visual);
+        TheScene->AddVisual(visual);
     }
 
-    Renderer->SetScene(Scene);
+    // Add some lights
+    std::shared_ptr<Light> light = std::make_shared<DirectionalLight>();
+    light->SetColor(XMFLOAT3(0.6f, 0.6f, 0.4f));
+    light->SetOrientation(QuaternionFromViewDirection(XMVector3Normalize(XMVectorSet(-1, -1, -1, 0)), XMVectorSet(0, 1, 0, 0)));
+    TheScene->AddLight(light);
+
+    light = std::make_shared<DirectionalLight>();
+    light->SetColor(XMFLOAT3(0.4f, 0.4f, 0.6f));
+    light->SetOrientation(QuaternionFromViewDirection(XMVector3Normalize(XMVectorSet(1, -1, 1, 0)), XMVectorSet(0, 1, 0, 0)));
+    TheScene->AddLight(light);
+
+    Renderer->SetScene(TheScene);
 
     BackBufferRT.Texture = Presenter->GetBackBuffer();
     BackBufferRT.Viewport.Width = static_cast<float>(BackBufferRT.Texture->GetDesc().Width);
@@ -322,8 +335,7 @@ HRESULT GfxInitialize()
 
 void GfxShutdown()
 {
-    Visuals.clear();
-    Scene = nullptr;
+    TheScene = nullptr;
     BackBufferRT.Texture = nullptr;
     Renderer = nullptr;
     Presenter = nullptr;

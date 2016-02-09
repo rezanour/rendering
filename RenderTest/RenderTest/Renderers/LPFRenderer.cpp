@@ -3,13 +3,14 @@
 #include "CoreGraphics/GraphicsDevice.h"
 #include "CoreGraphics/Texture.h"
 #include "CoreGraphics/RenderingCommon.h"
-#include "Scene/RenderScene.h"
-#include "Scene/RenderVisual.h"
 #include "CoreGraphics/VertexBuffer.h"
 #include "CoreGraphics/IndexBuffer.h"
 #include "CoreGraphics/ConstantBuffer.h"
 #include "CoreGraphics/VertexFormats.h"
 #include "CoreGraphics/ShaderPass.h"
+#include "Scene/Scene.h"
+#include "Scene/Visual.h"
+#include "Scene/Light.h"
 
 // shaders
 #include "Shaders/GBuffer_vs.h"
@@ -104,7 +105,7 @@ HRESULT LPFRenderer::Initialize()
     hr = Graphics->CreateIndexBuffer(indices, sizeof(indices), &ib);
     CHECKHR(hr);
 
-    QuadVisual = std::make_shared<RenderVisual>();
+    QuadVisual = std::make_shared<Visual>();
     hr = QuadVisual->Initialize(vb, ib, 0, _countof(indices));
     CHECKHR(hr);
 
@@ -118,6 +119,7 @@ HRESULT LPFRenderer::RenderFrame(const RenderTarget& renderTarget, const RenderV
 {
     // Scene traversal once, used for multiple passes
     Scene->GetVisibleVisuals(view, &Visuals);
+    Scene->GetVisibleLights(view, &Lights);
 
     RenderGBuffer(view);
     RenderLights(view);
@@ -241,17 +243,22 @@ void LPFRenderer::RenderLights(const RenderView& view)
     DLightVSCB->Update(&vsConstants, sizeof(vsConstants));
 
     DLightPSConstants psConstants{};
-    psConstants.NumLights = 2;
+    psConstants.NumLights = 0;
 
-    psConstants.Lights[0].Color = XMFLOAT3(0.3f, 0.3f, 0.6f);
-    XMVECTOR lightDir = XMVector3Normalize(XMVectorSet(-1, 1, -1, 0));
-    lightDir = XMVector3TransformNormal(lightDir, worldToView);
-    XMStoreFloat3(&psConstants.Lights[0].Direction, lightDir);
+    for (auto& light : Lights)
+    {
+        if (light->GetType() == LightType::Directional)
+        {
+            psConstants.Lights[psConstants.NumLights].Color = light->GetColor();
 
-    psConstants.Lights[1].Color = XMFLOAT3(0.7f, 0.7f, 0.5f);
-    lightDir = XMVector3Normalize(XMVectorSet(1, 1, 1, 0));
-    lightDir = XMVector3TransformNormal(lightDir, worldToView);
-    XMStoreFloat3(&psConstants.Lights[1].Direction, lightDir);
+            XMFLOAT4X4 localToWorld = light->GetLocalToWorld();
+            XMVECTOR lightDir = XMVectorNegate(XMVectorSet(localToWorld.m[2][0], localToWorld.m[2][1], localToWorld.m[2][2], 0.f));
+            lightDir = XMVector3TransformNormal(lightDir, worldToView);
+            XMStoreFloat3(&psConstants.Lights[psConstants.NumLights].Direction, lightDir);
+
+            ++psConstants.NumLights;
+        }
+    }
 
     DLightPSCB->Update(&psConstants, sizeof(psConstants));
 

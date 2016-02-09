@@ -3,7 +3,8 @@
 #include "CoreGraphics/BaseRenderer.h"
 #include "CoreGraphics/RenderingCommon.h"
 
-class RenderVisual;
+class Visual;
+class Light;
 class VertexBuffer;
 class ConstantBuffer;
 class ShaderPass;
@@ -28,7 +29,7 @@ public:
         return RecreateSurfaces(MsaaEnabled ? 4 : 1);
     }
 
-    virtual void SetScene(const std::shared_ptr<RenderScene>& scene) override
+    virtual void SetScene(const std::shared_ptr<Scene>& scene) override
     {
         Scene = scene;
     }
@@ -44,12 +45,14 @@ private:
 
 private:
     ComPtr<ID3D11DeviceContext> Context;
-    std::shared_ptr<RenderScene> Scene;
+    std::shared_ptr<Scene> Scene;
 
-    std::vector<std::shared_ptr<RenderVisual>> Visuals;
-    D3D11_VIEWPORT Viewport{};
+    // scratch buffers used to cache results throughout the frame
+    std::vector<std::shared_ptr<Visual>> Visuals;
+    std::vector<std::shared_ptr<Light>> Lights;
 
     bool MsaaEnabled = true;
+    D3D11_VIEWPORT Viewport{};
 
     // GBuffer pass
     struct GBufferVSConstants
@@ -66,7 +69,7 @@ private:
 
     // Light pass
 
-    std::shared_ptr<RenderVisual> QuadVisual;
+    std::shared_ptr<Visual> QuadVisual;
 
     struct DLightVSConstants
     {

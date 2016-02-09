@@ -35,24 +35,10 @@ public:
         return VB;
     }
 
-    const XMFLOAT3& GetBoundsOffset() const
-    {
-        return BoundsOffset;
-    }
-
-    float GetBoundsRadius() const
-    {
-        return BoundsRadius;
-    }
-
 private:
     ComPtr<ID3D11Buffer> VB;
     VertexFormat Format;
     uint32_t Stride;
     uint32_t BaseVertex;
     uint32_t VertexCount;
-
-    // Bounding Sphere
-    XMFLOAT3 BoundsOffset;  // vertices aren't necessarily centered around origin
-    float BoundsRadius;
 };

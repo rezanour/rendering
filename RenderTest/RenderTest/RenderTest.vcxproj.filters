@@ -31,6 +31,9 @@
     <Filter Include="Source Files\Renderers">
       <UniqueIdentifier>{8649af1e-4ed4-4f52-978f-d380e4726308}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\Shaders">
+      <UniqueIdentifier>{d37ee77a-c868-4b13-b819-cee7e65729b2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -42,37 +45,46 @@
     <ClCompile Include="AssetLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Scene\Scene.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene\Visual.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
     <ClCompile Include="CoreGraphics\ConstantBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CoreGraphics\GraphicsDevice.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CoreGraphics\IndexBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderers\LPFRenderer.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\CoreGraphics</Filter>
     </ClCompile>
     <ClCompile Include="CoreGraphics\DxgiPresenter.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\CoreGraphics</Filter>
     </ClCompile>
-    <ClCompile Include="Scene\RenderScene.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="CoreGraphics\GraphicsDevice.cpp">
+      <Filter>Source Files\CoreGraphics</Filter>
+    </ClCompile>
+    <ClCompile Include="CoreGraphics\IndexBuffer.cpp">
+      <Filter>Source Files\CoreGraphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderers\LPFRenderer.cpp">
+      <Filter>Source Files\Renderers</Filter>
     </ClCompile>
     <ClCompile Include="CoreGraphics\ShaderPass.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\CoreGraphics</Filter>
     </ClCompile>
     <ClCompile Include="CoreGraphics\Texture.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Scene\RenderVisual.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\CoreGraphics</Filter>
     </ClCompile>
     <ClCompile Include="CoreGraphics\VertexBuffer.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\CoreGraphics</Filter>
     </ClCompile>
     <ClCompile Include="CoreGraphics\VertexFormats.cpp">
+      <Filter>Source Files\CoreGraphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene\Object.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene\Light.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="MathUtil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -83,60 +95,87 @@
     <ClInclude Include="AssetLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Scene\Scene.h">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene\Visual.h">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
     <ClInclude Include="CoreGraphics\BasePresenter.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\CoreGraphics</Filter>
     </ClInclude>
     <ClInclude Include="CoreGraphics\BaseRenderer.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\CoreGraphics</Filter>
     </ClInclude>
     <ClInclude Include="CoreGraphics\ConstantBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CoreGraphics\GraphicsDevice.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CoreGraphics\IndexBuffer.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\CoreGraphics</Filter>
     </ClInclude>
     <ClInclude Include="CoreGraphics\DxgiPresenter.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\CoreGraphics</Filter>
     </ClInclude>
-    <ClInclude Include="Renderers\LPFRenderer.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="CoreGraphics\GraphicsDevice.h">
+      <Filter>Header Files\CoreGraphics</Filter>
+    </ClInclude>
+    <ClInclude Include="CoreGraphics\IndexBuffer.h">
+      <Filter>Header Files\CoreGraphics</Filter>
     </ClInclude>
     <ClInclude Include="CoreGraphics\RenderingCommon.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene\RenderScene.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene\RenderVisual.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\CoreGraphics</Filter>
     </ClInclude>
     <ClInclude Include="CoreGraphics\ShaderPass.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\CoreGraphics</Filter>
     </ClInclude>
     <ClInclude Include="CoreGraphics\Texture.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\CoreGraphics</Filter>
     </ClInclude>
     <ClInclude Include="CoreGraphics\VertexBuffer.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\CoreGraphics</Filter>
     </ClInclude>
     <ClInclude Include="CoreGraphics\VertexFormats.h">
+      <Filter>Header Files\CoreGraphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderers\LPFRenderer.h">
+      <Filter>Header Files\Renderers</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene\Light.h">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene\Object.h">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="MathUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shaders\DirectionalLight_MSAAx4_ps.hlsl" />
-    <FxCompile Include="Shaders\FinalPass_MSAAx4_ps.hlsl" />
-    <FxCompile Include="Shaders\FinalPass_ps.hlsl" />
-    <FxCompile Include="Shaders\FinalPass_vs.hlsl" />
-    <FxCompile Include="Shaders\GBuffer_ps.hlsl" />
-    <FxCompile Include="Shaders\GBuffer_vs.hlsl" />
-    <FxCompile Include="Shaders\DirectionalLight_ps.hlsl" />
-    <FxCompile Include="Shaders\DirectionalLight_vs.hlsl" />
+    <FxCompile Include="Shaders\DirectionalLight_MSAAx4_ps.hlsl">
+      <Filter>Resource Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\DirectionalLight_ps.hlsl">
+      <Filter>Resource Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\DirectionalLight_vs.hlsl">
+      <Filter>Resource Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\FinalPass_MSAAx4_ps.hlsl">
+      <Filter>Resource Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\FinalPass_ps.hlsl">
+      <Filter>Resource Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\FinalPass_vs.hlsl">
+      <Filter>Resource Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\GBuffer_ps.hlsl">
+      <Filter>Resource Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\GBuffer_vs.hlsl">
+      <Filter>Resource Files\Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\Common.hlsli" />
+    <None Include="Shaders\Common.hlsli">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

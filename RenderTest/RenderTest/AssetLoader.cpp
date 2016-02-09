@@ -5,7 +5,7 @@
 #include "CoreGraphics/VertexBuffer.h"
 #include "CoreGraphics/IndexBuffer.h"
 #include "CoreGraphics/Texture.h"
-#include "Scene/RenderVisual.h"
+#include "Scene/Visual.h"
 
 using namespace Microsoft::WRL::Wrappers;
 
@@ -88,7 +88,7 @@ AssetLoader::~AssetLoader()
 {
 }
 
-HRESULT AssetLoader::LoadModel(const std::wstring& relativePath, std::vector<std::shared_ptr<RenderVisual>>* visuals)
+HRESULT AssetLoader::LoadModel(const std::wstring& relativePath, std::vector<std::shared_ptr<Visual>>* visuals)
 {
     assert(!relativePath.empty());
     assert(visuals != nullptr);
@@ -174,7 +174,7 @@ HRESULT AssetLoader::LoadModel(const std::wstring& relativePath, std::vector<std
                 return HRESULT_FROM_WIN32(GetLastError());
             }
 
-            std::shared_ptr<RenderVisual> visual = std::make_shared<RenderVisual>();
+            std::shared_ptr<Visual> visual = std::make_shared<Visual>();
             hr = visual->Initialize(vb, ib, part.StartIndex, part.NumIndices);
             CHECKHR(hr);
 

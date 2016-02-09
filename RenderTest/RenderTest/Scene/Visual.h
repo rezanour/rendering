@@ -1,14 +1,16 @@
 #pragma once
 
+#include "Object.h"
+
 class VertexBuffer;
 class IndexBuffer;
 class Texture2D;
 
-class RenderVisual : NonCopyable
+class Visual : public Object
 {
 public:
-    RenderVisual();
-    virtual ~RenderVisual();
+    Visual();
+    virtual ~Visual();
 
     HRESULT Initialize(
         const std::shared_ptr<VertexBuffer>& vertexBuffer,
@@ -41,34 +43,8 @@ public:
     const std::shared_ptr<Texture2D>& GetSpecularTexture() const;
     void SetSpecularTexture(const std::shared_ptr<Texture2D>& texture);
 
-    const XMFLOAT3& GetPosition() const
-    {
-        return Position;
-    }
-
-    void SetPosition(const XMFLOAT3& position)
-    {
-        Position = position;
-        LocalToWorldDirty = true;
-        WorldBoundsCenterDirty = true;
-    }
-
-    const XMFLOAT4& GetOrientation() const
-    {
-        return Orientation;
-    }
-
-    void SetOrientation(const XMFLOAT4& orientation)
-    {
-        Orientation = orientation;
-        LocalToWorldDirty = true;
-    }
-
-    const XMFLOAT4X4& GetLocalToWorld() const;
-
-    const XMFLOAT3& GetWorldBoundsCenter() const;
-
-    float GetWorldBoundsRadius() const;
+private:
+    virtual void RecomputeWorldBoundsCenter() const override;
 
 private:
     std::shared_ptr<VertexBuffer> VB;
@@ -79,14 +55,4 @@ private:
     std::shared_ptr<Texture2D> AlbedoTexture;
     std::shared_ptr<Texture2D> NormalTexture;
     std::shared_ptr<Texture2D> SpecularTexture;
-
-    XMFLOAT3 Position;
-    XMFLOAT4 Orientation;
-
-    mutable bool LocalToWorldDirty;
-    mutable XMFLOAT4X4 LocalToWorld;
-
-    // world bounds center
-    mutable bool WorldBoundsCenterDirty;
-    mutable XMFLOAT3 WorldBoundsCenter;
 };

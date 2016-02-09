@@ -2,7 +2,7 @@
 
 #include "VertexFormats.h"
 
-class RenderVisual;
+class Visual;
 
 enum class ShaderPassType
 {
@@ -43,7 +43,7 @@ public:
     void SetPSSampler(int slot, const ComPtr<ID3D11SamplerState>& sampler);
 
     void Begin();
-    void Draw(const std::shared_ptr<RenderVisual>& visual);
+    void Draw(const std::shared_ptr<Visual>& visual);
     void End();
 
 private:

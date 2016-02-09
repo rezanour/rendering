@@ -1,6 +1,6 @@
 #include "Precomp.h"
 #include "ShaderPass.h"
-#include "Scene/RenderVisual.h"
+#include "Scene/Visual.h"
 #include "VertexBuffer.h"
 #include "VertexFormats.h"
 #include "IndexBuffer.h"
@@ -252,7 +252,7 @@ void ShaderPass::Begin()
     Rendering = true;
 }
 
-void ShaderPass::Draw(const std::shared_ptr<RenderVisual>& visual)
+void ShaderPass::Draw(const std::shared_ptr<Visual>& visual)
 {
     auto& vb = visual->GetVB();
     uint32_t stride = vb->GetStride();
