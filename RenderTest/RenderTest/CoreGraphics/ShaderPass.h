@@ -30,8 +30,6 @@ public:
 
     HRESULT InitializeCompute(const ComPtr<ID3D11Device>& device, const uint8_t* computeShader, size_t computeShaderNumBytes);
 
-    void SetBuffer(int slot, const ComPtr<ID3D11UnorderedAccessView>& uav, bool resetCounterEachPass);
-
     void SetRenderTarget(int slot, const ComPtr<ID3D11RenderTargetView>& rtv);
     // Passing nullptr clears viewport to "full size"
     void SetViewport(const D3D11_VIEWPORT* viewport);
@@ -39,12 +37,16 @@ public:
     void SetDepthBuffer(const ComPtr<ID3D11DepthStencilView>& dsv);
     void SetDepthState(const ComPtr<ID3D11DepthStencilState>& depthState);
 
+    void SetCSBuffer(int slot, const ComPtr<ID3D11UnorderedAccessView>& uav, bool resetCounterEachPass);
     void SetCSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb);
     void SetCSResource(int slot, const ComPtr<ID3D11ShaderResourceView>& srv);
+
     void SetVSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb);
-    void SetPSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb);
     void SetVSResource(int slot, const ComPtr<ID3D11ShaderResourceView>& srv);
+
+    void SetPSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb);
     void SetPSResource(int slot, const ComPtr<ID3D11ShaderResourceView>& srv);
+
     void SetVSSampler(int slot, const ComPtr<ID3D11SamplerState>& sampler);
     void SetPSSampler(int slot, const ComPtr<ID3D11SamplerState>& sampler);
 
@@ -73,18 +75,18 @@ private:
     ComPtr<ID3D11PixelShader> PixelShader;
     ComPtr<ID3D11ComputeShader> ComputeShader;
 
-    ID3D11UnorderedAccessView* Buffers[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
-    uint32_t BufferCounters[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
-
     ID3D11RenderTargetView* RenderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT]{};
     ComPtr<ID3D11DepthStencilView> DepthBuffer;
     ComPtr<ID3D11DepthStencilState> DepthState;
     D3D11_VIEWPORT Viewport{};
 
-    ID3D11Buffer* VSCSConstants[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
-    ID3D11Buffer* PSConstants[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
+    ID3D11UnorderedAccessView* CSBuffers[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
+    uint32_t CSBufferCounters[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
 
+    ID3D11Buffer* VSCSConstants[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
     ID3D11ShaderResourceView* VSCSResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
+
+    ID3D11Buffer* PSConstants[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
     ID3D11ShaderResourceView* PSResources[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
 
     ID3D11SamplerState* VSSamplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT]{};

@@ -168,6 +168,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
             forward = XMVector3Cross(right, up);
             XMStoreFloat4x4(&View.WorldToView, XMMatrixLookToLH(position, forward, up));
 
+            XMStoreFloat3(&View.EyePosition, position);
+
 #ifdef USE_HEADLIGHT
             Headlight->SetOrientation(QuaternionFromViewDirection(XMVector3Normalize(forward), up));
 #endif
@@ -331,6 +333,11 @@ HRESULT GfxInitialize()
     light = std::make_shared<DirectionalLight>();
     light->SetColor(XMFLOAT3(0.4f, 0.4f, 0.6f));
     light->SetOrientation(QuaternionFromViewDirection(XMVector3Normalize(XMVectorSet(1, -1, 1, 0)), XMVectorSet(0, 1, 0, 0)));
+    TheScene->AddLight(light);
+
+    light = std::make_shared<PointLight>();
+    light->SetColor(XMFLOAT3(1.f, 0.f, 0.f));
+    ((PointLight*)light.get())->SetRadius(100.f);
     TheScene->AddLight(light);
 #endif
 

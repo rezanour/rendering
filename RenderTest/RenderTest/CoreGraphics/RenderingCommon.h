@@ -5,6 +5,7 @@ class Texture2D;
 // View information for rendering
 struct RenderView
 {
+    XMFLOAT3 EyePosition;
     XMFLOAT4X4 WorldToView;
     XMFLOAT4X4 ViewToProjection;
 };

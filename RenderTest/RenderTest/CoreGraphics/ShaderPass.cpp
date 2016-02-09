@@ -11,16 +11,16 @@ ShaderPass::ShaderPass()
 
 ShaderPass::~ShaderPass()
 {
-    for (int i = 0; i < _countof(Buffers); ++i)
-    {
-        if (Buffers[i]) Buffers[i]->Release();
-        Buffers[i] = nullptr;
-    }
-
     for (int i = 0; i < _countof(RenderTargets); ++i)
     {
         if (RenderTargets[i]) RenderTargets[i]->Release();
         RenderTargets[i] = nullptr;
+    }
+
+    for (int i = 0; i < _countof(CSBuffers); ++i)
+    {
+        if (CSBuffers[i]) CSBuffers[i]->Release();
+        CSBuffers[i] = nullptr;
     }
 
     assert(_countof(VSCSConstants) == _countof(PSConstants));
@@ -98,21 +98,6 @@ HRESULT ShaderPass::InitializeCompute(const ComPtr<ID3D11Device>& device, const 
     return hr;
 }
 
-void ShaderPass::SetBuffer(int slot, const ComPtr<ID3D11UnorderedAccessView>& uav, bool resetCounterEachPass)
-{
-    // can't change buffer while rendering
-    assert(!Rendering);
-
-    assert(slot >= 0 && slot < _countof(Buffers));
-
-    if (Buffers[slot]) Buffers[slot]->Release();
-
-    Buffers[slot] = uav.Get();
-    BufferCounters[slot] = resetCounterEachPass ? 0 : -1;
-
-    if (Buffers[slot]) Buffers[slot]->AddRef();
-}
-
 void ShaderPass::SetRenderTarget(int slot, const ComPtr<ID3D11RenderTargetView>& rtv)
 {
     // can't change RT while rendering
@@ -173,6 +158,21 @@ void ShaderPass::SetDepthState(const ComPtr<ID3D11DepthStencilState>& depthState
     DepthState = depthState;
 }
 
+void ShaderPass::SetCSBuffer(int slot, const ComPtr<ID3D11UnorderedAccessView>& uav, bool resetCounterEachPass)
+{
+    // can't change buffer while rendering
+    assert(!Rendering);
+
+    assert(slot >= 0 && slot < _countof(CSBuffers));
+
+    if (CSBuffers[slot]) CSBuffers[slot]->Release();
+
+    CSBuffers[slot] = uav.Get();
+    CSBufferCounters[slot] = resetCounterEachPass ? 0 : -1;
+
+    if (CSBuffers[slot]) CSBuffers[slot]->AddRef();
+}
+
 void ShaderPass::SetCSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb)
 {
     assert(slot >= 0 && slot < _countof(VSCSConstants));
@@ -221,22 +221,6 @@ void ShaderPass::SetVSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb)
     }
 }
 
-void ShaderPass::SetPSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb)
-{
-    assert(slot >= 0 && slot < _countof(PSConstants));
-
-    if (PSConstants[slot]) PSConstants[slot]->Release();
-
-    PSConstants[slot] = cb.Get();
-
-    if (PSConstants[slot]) PSConstants[slot]->AddRef();
-
-    if (Rendering)
-    {
-        Context->PSSetConstantBuffers(slot, 1, cb.GetAddressOf());
-    }
-}
-
 void ShaderPass::SetVSResource(int slot, const ComPtr<ID3D11ShaderResourceView>& srv)
 {
     assert(slot >= 0 && slot < _countof(VSCSResources));
@@ -250,6 +234,22 @@ void ShaderPass::SetVSResource(int slot, const ComPtr<ID3D11ShaderResourceView>&
     if (Rendering)
     {
         Context->VSSetShaderResources(slot, 1, srv.GetAddressOf());
+    }
+}
+
+void ShaderPass::SetPSConstantBuffer(int slot, const ComPtr<ID3D11Buffer>& cb)
+{
+    assert(slot >= 0 && slot < _countof(PSConstants));
+
+    if (PSConstants[slot]) PSConstants[slot]->Release();
+
+    PSConstants[slot] = cb.Get();
+
+    if (PSConstants[slot]) PSConstants[slot]->AddRef();
+
+    if (Rendering)
+    {
+        Context->PSSetConstantBuffers(slot, 1, cb.GetAddressOf());
     }
 }
 
@@ -358,8 +358,10 @@ void ShaderPass::End()
     static ID3D11UnorderedAccessView* const nullUAVs[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
     static uint32_t emptyCounters[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
 
-    Context->CSSetUnorderedAccessViews(0, _countof(nullUAVs), nullUAVs, emptyCounters);
     Context->OMSetRenderTargets(_countof(nullRTVs), nullRTVs, nullptr);
+
+    Context->CSSetUnorderedAccessViews(0, _countof(nullUAVs), nullUAVs, emptyCounters);
+    Context->CSSetShaderResources(0, _countof(nullSRVs), nullSRVs);
     Context->VSSetShaderResources(0, _countof(nullSRVs), nullSRVs);
     Context->PSSetShaderResources(0, _countof(nullSRVs), nullSRVs);
 
@@ -375,6 +377,7 @@ void ShaderPass::BeginGraphics()
     }
 
     Context->OMSetRenderTargets(_countof(RenderTargets), RenderTargets, DepthBuffer.Get());
+
     Context->OMSetDepthStencilState(DepthState.Get(), 0);
     Context->RSSetViewports(1, &Viewport);
 
@@ -403,7 +406,7 @@ void ShaderPass::BeginCompute()
     Context->PSSetShader(nullptr, nullptr, 0);
 
     Context->CSSetShader(ComputeShader.Get(), nullptr, 0);
-    Context->CSSetUnorderedAccessViews(0, _countof(Buffers), Buffers, BufferCounters);
+    Context->CSSetUnorderedAccessViews(0, _countof(CSBuffers), CSBuffers, CSBufferCounters);
     Context->CSSetConstantBuffers(0, _countof(VSCSConstants), VSCSConstants);
     Context->CSSetShaderResources(0, _countof(VSCSResources), VSCSResources);
 }

@@ -1,7 +1,8 @@
 
 cbuffer Constants
 {
-    uint RTWidth;
+    uint TileSize;
+    uint NumTilesX;
     uint NumLights;
 };
 
@@ -24,10 +25,10 @@ struct LightLinkedListNode
 RWStructuredBuffer<LightLinkedListNode> Nodes;
 RWByteAddressBuffer Heads;
 
-void AddLight(uint2 pixelCoord, uint lightIndex)
+void AddLight(uint2 tileCoord, uint lightIndex)
 {
     uint iNode = Nodes.IncrementCounter();
-    uint headAddress = 4 * ((RTWidth * pixelCoord.y) + pixelCoord.x);
+    uint headAddress = 4 * ((NumTilesX * tileCoord.y) + tileCoord.x);
     uint oldHead = 0;
     Heads.InterlockedExchange(headAddress, iNode, oldHead);
 
@@ -37,21 +38,18 @@ void AddLight(uint2 pixelCoord, uint lightIndex)
     Nodes[iNode] = node;
 }
 
-static const uint NUM_PIXELS_PER_GROUP_X = 4;
-static const uint NUM_PIXELS_PER_GROUP_Y = 4;
-
-[numthreads(NUM_PIXELS_PER_GROUP_X, NUM_PIXELS_PER_GROUP_Y, 1)]
+[numthreads(4, 4, 1)]
 void main(
     uint3 GroupThreadID : SV_GroupThreadID,
     uint3 GroupID : SV_GroupID,
     uint3 DispatchThreadID : SV_DispatchThreadID)
 {
-    // Determine which pixel we are
-    uint2 pixelCoord = GroupID.xy * uint2(NUM_PIXELS_PER_GROUP_X, NUM_PIXELS_PER_GROUP_Y) + GroupThreadID.xy;
-
     // TODO: implement culling :)
     for (uint i = 0; i < NumLights; ++i)
     {
-        AddLight(pixelCoord, i);
+        if (GroupThreadID.x == 0 && GroupThreadID.y == 0)
+        {
+            AddLight(GroupID.xy, i);
+        }
     }
 }

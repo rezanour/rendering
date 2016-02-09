@@ -69,9 +69,10 @@ private:
     // Light culling pass
     struct LightCullConstants
     {
-        uint32_t RTWidth;
+        uint32_t TileSize;
+        uint32_t NumTilesX;
         uint32_t NumLights;
-        XMUINT2 Pad;
+        uint32_t Pad;
     };
 
     std::shared_ptr<ShaderPass> LightCullPass;
@@ -97,8 +98,9 @@ private:
     {
         DLight Lights[MaxDLights];
         uint32_t NumLights;
-        uint32_t RTWidth;
-        XMFLOAT2 Pad0;
+        uint32_t TileSize;
+        uint32_t NumTilesX;
+        uint32_t Pad;
     };
 
     std::shared_ptr<ShaderPass> FinalPass;

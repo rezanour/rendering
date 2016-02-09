@@ -51,4 +51,9 @@ class PointLight : public Light
 public:
     PointLight();
     virtual ~PointLight();
+
+    void SetRadius(float radius)
+    {
+        BoundsRadius = radius;
+    }
 };

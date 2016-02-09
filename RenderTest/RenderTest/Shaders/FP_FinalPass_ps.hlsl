@@ -9,11 +9,12 @@ struct DLight
 };
 
 #define MAX_DLIGHTS 8
-cbuffer FinalPSConstants
+cbuffer FinalPSConstants : register (b0)
 {
     DLight DLights[MAX_DLIGHTS];
     uint NumDLights;
-    uint RTWidth;
+    uint TileSize;
+    uint NumTilesX;
 };
 
 struct PointLight
@@ -24,7 +25,7 @@ struct PointLight
     float Pad;
 };
 
-StructuredBuffer<PointLight> Lights;
+StructuredBuffer<PointLight> Lights : register (t0);
 
 struct LightLinkedListNode
 {
@@ -32,12 +33,11 @@ struct LightLinkedListNode
     uint NextLight;
 };
 
-StructuredBuffer<LightLinkedListNode> Nodes;
-Buffer<uint> Heads;
+StructuredBuffer<LightLinkedListNode> Nodes : register (t1);
+ByteAddressBuffer Heads : register (t2);
 
-
-Texture2D AlbedoTexture;
-Texture2D NormalTexture;
+Texture2D AlbedoTexture : register (t3);
+Texture2D NormalTexture : register (t4);
 SamplerState Sampler;
 
 float4 main(FPFinalPassVSOutput input) : SV_TARGET
@@ -55,20 +55,29 @@ float4 main(FPFinalPassVSOutput input) : SV_TARGET
     normal = mul(normal, float3x3(normalize(input.ViewTangent), -normalize(input.ViewBiTangent), normalize(input.ViewNormal)));
     normal = normalize(normal);
 
-    float3 light = float3(0, 0, 0);
+    float3 totalLight = float3(0, 0, 0);
 
     for (uint i = 0; i < NumDLights; ++i)
     {
-        light += saturate(DLights[i].Color * dot(DLights[i].Direction, normal));
+        totalLight += saturate(DLights[i].Color * dot(DLights[i].Direction, normal));
     }
 
-    uint iNode = Heads[input.Position.y * RTWidth + input.Position.x];
+    uint2 pos = input.Position.xy / TileSize;
+    uint iNode = Heads.Load(pos.y * NumTilesX + pos.x);
     while (iNode != 0xFFFFFFFF)
     {
         LightLinkedListNode node = Nodes[iNode];
-        light += saturate(Lights[node.LightIndex].Color * 0.5f);
+        PointLight light = Lights[node.LightIndex];
+
+        float3 toLight = light.Position - input.ViewPosition;
+        float3 L = normalize(toLight);
+        float dist = length(toLight);
+        float denom = (dist / light.Radius) + 1;
+        float att = 1.f / (denom * denom);
+        totalLight += light.Color * att;
+
         iNode = node.NextLight;
     }
 
-    return float4(albedo.xyz * light, albedo.w);
+    return float4(albedo.xyz * totalLight, albedo.w);
 }

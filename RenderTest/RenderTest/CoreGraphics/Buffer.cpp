@@ -37,10 +37,19 @@ HRESULT Buffer::CreateViews(const ComPtr<ID3D11Device>& device, bool isStructure
     if (Desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
     {
         D3D11_SHADER_RESOURCE_VIEW_DESC srvd{};
-        srvd.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-        srvd.Format = isStructured ? DXGI_FORMAT_UNKNOWN : DXGI_FORMAT_R32_UINT;
-        srvd.Buffer.NumElements = Desc.ByteWidth / Desc.StructureByteStride;
-        srvd.Buffer.ElementWidth = Desc.StructureByteStride;
+        srvd.ViewDimension = isStructured ? D3D11_SRV_DIMENSION_BUFFER : D3D11_SRV_DIMENSION_BUFFEREX;
+        if (isStructured)
+        {
+            srvd.Format = DXGI_FORMAT_UNKNOWN;
+            srvd.Buffer.NumElements = Desc.ByteWidth / Desc.StructureByteStride;
+            srvd.Buffer.ElementWidth = Desc.StructureByteStride;
+        }
+        else
+        {
+            srvd.Format = DXGI_FORMAT_R32_TYPELESS;
+            srvd.BufferEx.NumElements = Desc.ByteWidth / Desc.StructureByteStride;
+            srvd.BufferEx.Flags = D3D11_BUFFEREX_SRV_FLAG_RAW;
+        }
         hr = device->CreateShaderResourceView(Resource.Get(), &srvd, &SRV);
         CHECKHR(hr);
     }
