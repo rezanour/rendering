@@ -44,7 +44,9 @@ private:
         XMFLOAT3 Color;
         float Pad;
     };
+    static const uint32_t MaxPointLights = 16384;
     std::shared_ptr<Buffer> LightBuffer;
+    std::vector<PointLight> PointLightsScratch;
 
     static const uint32_t LinkedListMaxElements = 65536;
     struct LightLinkedListNode
@@ -91,16 +93,17 @@ private:
     };
 
     static const uint32_t MaxDLights = 8;
-    struct FinalPassPSDLightConstants
+    struct FinalPassPSConstants
     {
         DLight Lights[MaxDLights];
         uint32_t NumLights;
-        XMFLOAT3 Pad0;
+        uint32_t RTWidth;
+        XMFLOAT2 Pad0;
     };
 
     std::shared_ptr<ShaderPass> FinalPass;
     std::shared_ptr<ShaderPass> FinalPassMsaa;
     std::shared_ptr<ConstantBuffer> FinalPassVSCB;
-    std::shared_ptr<ConstantBuffer> FinalPassPSDLightCB;
+    std::shared_ptr<ConstantBuffer> FinalPassPSCB;
     std::shared_ptr<Texture2D> FinalRTMsaa;
 };

@@ -44,9 +44,17 @@ HRESULT ForwardPlusRenderer::Initialize()
     hr = Graphics->CreateConstantBuffer(nullptr, sizeof(LightCullConstants), &LightCullCB);
     CHECKHR(hr);
 
+    LightBuffer = std::make_shared<Buffer>();
+    hr = LightBuffer->Initialize(Graphics->GetDevice(), sizeof(PointLight), sizeof(PointLight) * MaxPointLights, true, false);
+    CHECKHR(hr);
+
     LightLinkedListNodes = std::make_shared<Buffer>();
     hr = LightLinkedListNodes->Initialize(Graphics->GetDevice(), sizeof(LightLinkedListNode), sizeof(LightLinkedListNode) * LinkedListMaxElements, true, true);
     CHECKHR(hr);
+
+    LightCullPass->SetCSConstantBuffer(0, LightCullCB->GetCB());
+    LightCullPass->SetCSResource(0, LightBuffer->GetSRV());
+    LightCullPass->SetBuffer(0, LightLinkedListNodes->GetUAV(), true);
 
     // Final pass
     hr = Graphics->CreateShaderPassGraphics(VertexFormat::Basic3D, FP_FinalPass_vs, sizeof(FP_FinalPass_vs), FP_FinalPass_ps, sizeof(FP_FinalPass_ps), &FinalPass);
@@ -55,19 +63,23 @@ HRESULT ForwardPlusRenderer::Initialize()
     hr = Graphics->CreateConstantBuffer(nullptr, sizeof(FinalPassVSConstants), &FinalPassVSCB);
     CHECKHR(hr);
 
-    hr = Graphics->CreateConstantBuffer(nullptr, sizeof(FinalPassPSDLightConstants), &FinalPassPSDLightCB);
+    hr = Graphics->CreateConstantBuffer(nullptr, sizeof(FinalPassPSConstants), &FinalPassPSCB);
     CHECKHR(hr);
 
+    FinalPass->SetPSResource(0, LightBuffer->GetSRV());
+    FinalPass->SetPSResource(1, LightLinkedListNodes->GetSRV());
     FinalPass->SetVSConstantBuffer(0, FinalPassVSCB->GetCB());
-    FinalPass->SetPSConstantBuffer(0, FinalPassPSDLightCB->GetCB());
+    FinalPass->SetPSConstantBuffer(0, FinalPassPSCB->GetCB());
     FinalPass->SetPSSampler(0, Graphics->GetAnisoWrapSampler());
     FinalPass->SetDepthState(Graphics->GetDepthReadState());
 
     hr = Graphics->CreateShaderPassGraphics(VertexFormat::Basic3D, FP_FinalPass_vs, sizeof(FP_FinalPass_vs), FP_FinalPass_ps, sizeof(FP_FinalPass_ps), &FinalPassMsaa);
     CHECKHR(hr);
 
+    FinalPassMsaa->SetPSResource(0, LightBuffer->GetSRV());
+    FinalPassMsaa->SetPSResource(1, LightLinkedListNodes->GetSRV());
     FinalPassMsaa->SetVSConstantBuffer(0, FinalPassVSCB->GetCB());
-    FinalPassMsaa->SetPSConstantBuffer(0, FinalPassPSDLightCB->GetCB());
+    FinalPassMsaa->SetPSConstantBuffer(0, FinalPassPSCB->GetCB());
     FinalPassMsaa->SetPSSampler(0, Graphics->GetAnisoWrapSampler());
     FinalPassMsaa->SetDepthState(Graphics->GetDepthReadState());
 
@@ -125,12 +137,48 @@ void ForwardPlusRenderer::RenderZPrePass(const RenderView& view)
 void ForwardPlusRenderer::CullLights(const RenderView& view)
 {
     UNREFERENCED_PARAMETER(view);
+
+    uint32_t clearHeads[] = { (uint32_t)-1, (uint32_t)-1, (uint32_t)-1, (uint32_t)-1 };
+    Context->ClearUnorderedAccessViewUint(LightLinkedListHeads->GetUAV().Get(), clearHeads);
+
+    PointLightsScratch.clear();
+    for (auto& light : Lights)
+    {
+        if (light->GetType() == LightType::Point)
+        {
+            PointLight pl{};
+            pl.Color = light->GetColor();
+            pl.Position = light->GetPosition();
+            pl.Radius = light->GetWorldBoundsRadius();
+
+            PointLightsScratch.push_back(pl);
+        }
+    }
+
+    if (PointLightsScratch.empty())
+    {
+        return;
+    }
+
+    LightCullConstants constants{};
+    constants.RTWidth = RTWidth;
+    constants.NumLights = (uint32_t)PointLightsScratch.size();
+
+    LightCullCB->Update(&constants, sizeof(constants));
+
+    D3D11_BOX box{};
+    box.right = sizeof(PointLight) * constants.NumLights;
+    box.back = 1;
+    box.bottom = 1;
+    Context->UpdateSubresource(LightBuffer->GetResource().Get(), 0, &box, PointLightsScratch.data(), box.right, box.right);
+
+    LightCullPass->Begin();
+    LightCullPass->Dispatch(RTWidth / 4, RTHeight / 4, 1);
+    LightCullPass->End();
 }
 
 void ForwardPlusRenderer::RenderFinal(const RenderView& view, const RenderTarget& renderTarget)
 {
-    UNREFERENCED_PARAMETER(view);
-
     auto& pass = (MsaaEnabled) ? FinalPassMsaa : FinalPass;
 
     if (!MsaaEnabled)
@@ -144,25 +192,26 @@ void ForwardPlusRenderer::RenderFinal(const RenderView& view, const RenderTarget
     XMMATRIX worldToProjection = XMMatrixMultiply(worldToView, XMLoadFloat4x4(&view.ViewToProjection));
 
     // Directional Lights are shared for all objects, so fill up front
-    FinalPassPSDLightConstants dlightConstants{};
-    dlightConstants.NumLights = 0;
+    FinalPassPSConstants psConstants{};
+    psConstants.NumLights = 0;
+    psConstants.RTWidth = RTWidth;
 
     for (auto& light : Lights)
     {
         if (light->GetType() == LightType::Directional)
         {
-            dlightConstants.Lights[dlightConstants.NumLights].Color = light->GetColor();
+            psConstants.Lights[psConstants.NumLights].Color = light->GetColor();
 
             XMFLOAT4X4 localToWorld = light->GetLocalToWorld();
             XMVECTOR lightDir = XMVectorNegate(XMVectorSet(localToWorld.m[2][0], localToWorld.m[2][1], localToWorld.m[2][2], 0.f));
             lightDir = XMVector3TransformNormal(lightDir, worldToView);
-            XMStoreFloat3(&dlightConstants.Lights[dlightConstants.NumLights].Direction, lightDir);
+            XMStoreFloat3(&psConstants.Lights[psConstants.NumLights].Direction, lightDir);
 
-            ++dlightConstants.NumLights;
+            ++psConstants.NumLights;
         }
     }
 
-    FinalPassPSDLightCB->Update(&dlightConstants, sizeof(dlightConstants));
+    FinalPassPSCB->Update(&psConstants, sizeof(psConstants));
 
     // Remainder of data is object-specific
     FinalPassVSConstants constants{};
@@ -180,8 +229,8 @@ void ForwardPlusRenderer::RenderFinal(const RenderView& view, const RenderTarget
             continue;
         }
 
-        pass->SetPSResource(0, visual->GetAlbedoTexture() ? visual->GetAlbedoTexture()->GetSRV() : nullptr);
-        pass->SetPSResource(1, visual->GetNormalTexture() ? visual->GetNormalTexture()->GetSRV() : nullptr);
+        pass->SetPSResource(3, visual->GetAlbedoTexture() ? visual->GetAlbedoTexture()->GetSRV() : nullptr);
+        pass->SetPSResource(4, visual->GetNormalTexture() ? visual->GetNormalTexture()->GetSRV() : nullptr);
 
         pass->Draw(visual);
     }
@@ -222,8 +271,6 @@ HRESULT ForwardPlusRenderer::RecreateSurfaces(uint32_t width, uint32_t height, u
     }
 
     desc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
-    //desc.Format = DXGI_FORMAT_D32_FLOAT;
-    //hr = Graphics->CreateTexture2D(desc, &DepthBuffer);
     desc.Format = DXGI_FORMAT_R32_TYPELESS;
     hr = Graphics->CreateTexture2D(desc, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_R32_FLOAT, DXGI_FORMAT_D32_FLOAT, &DepthBuffer);
     CHECKHR(hr);
@@ -235,15 +282,19 @@ HRESULT ForwardPlusRenderer::RecreateSurfaces(uint32_t width, uint32_t height, u
     hr = LightLinkedListHeads->Initialize(Graphics->GetDevice(), sizeof(uint32_t), sizeof(uint32_t) * RTWidth * RTHeight, false, false);
     CHECKHR(hr);
 
+    LightCullPass->SetBuffer(1, LightLinkedListHeads->GetUAV(), true);
+
     ZPrePass->SetViewport(&Viewport);
     ZPrePass->SetDepthBuffer(DepthBuffer->GetDSV());
 
     FinalPass->SetViewport(&Viewport);
     FinalPass->SetDepthBuffer(DepthBuffer->GetDSV());
+    FinalPass->SetPSResource(2, LightLinkedListHeads->GetSRV());
 
+    FinalPassMsaa->SetRenderTarget(0, FinalRTMsaa ? FinalRTMsaa->GetRTV() : nullptr);
     FinalPassMsaa->SetViewport(&Viewport);
     FinalPassMsaa->SetDepthBuffer(DepthBuffer->GetDSV());
-    FinalPassMsaa->SetRenderTarget(0, FinalRTMsaa ? FinalRTMsaa->GetRTV() : nullptr);
+    FinalPassMsaa->SetPSResource(2, LightLinkedListHeads->GetSRV());
 
     return hr;
 }

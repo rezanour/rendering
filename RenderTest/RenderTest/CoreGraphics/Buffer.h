@@ -29,7 +29,7 @@ public:
     }
 
 private:
-    HRESULT CreateViews(const ComPtr<ID3D11Device>& device, bool isCounter);
+    HRESULT CreateViews(const ComPtr<ID3D11Device>& device, bool isStructured, bool isCounter);
 
 private:
     D3D11_BUFFER_DESC Desc{};

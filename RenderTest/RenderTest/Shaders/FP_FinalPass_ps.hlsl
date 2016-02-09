@@ -9,11 +9,32 @@ struct DLight
 };
 
 #define MAX_DLIGHTS 8
-cbuffer DLightPSConstants
+cbuffer FinalPSConstants
 {
     DLight DLights[MAX_DLIGHTS];
     uint NumDLights;
+    uint RTWidth;
 };
+
+struct PointLight
+{
+    float3 Position;
+    float Radius;
+    float3 Color;
+    float Pad;
+};
+
+StructuredBuffer<PointLight> Lights;
+
+struct LightLinkedListNode
+{
+    uint LightIndex;
+    uint NextLight;
+};
+
+StructuredBuffer<LightLinkedListNode> Nodes;
+Buffer<uint> Heads;
+
 
 Texture2D AlbedoTexture;
 Texture2D NormalTexture;
@@ -39,6 +60,14 @@ float4 main(FPFinalPassVSOutput input) : SV_TARGET
     for (uint i = 0; i < NumDLights; ++i)
     {
         light += saturate(DLights[i].Color * dot(DLights[i].Direction, normal));
+    }
+
+    uint iNode = Heads[input.Position.y * RTWidth + input.Position.x];
+    while (iNode != 0xFFFFFFFF)
+    {
+        LightLinkedListNode node = Nodes[iNode];
+        light += saturate(Lights[node.LightIndex].Color * 0.5f);
+        iNode = node.NextLight;
     }
 
     return float4(albedo.xyz * light, albedo.w);

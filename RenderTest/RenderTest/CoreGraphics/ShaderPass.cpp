@@ -355,9 +355,10 @@ void ShaderPass::End()
 {
     static ID3D11RenderTargetView* const nullRTVs[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT]{};
     static ID3D11ShaderResourceView* const nullSRVs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
-    static ID3D11UnorderedAccessView* const nullUAVs[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
+    static ID3D11UnorderedAccessView* const nullUAVs[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
+    static uint32_t emptyCounters[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
 
-    Context->CSSetUnorderedAccessViews(0, _countof(nullUAVs), nullUAVs, nullptr);
+    Context->CSSetUnorderedAccessViews(0, _countof(nullUAVs), nullUAVs, emptyCounters);
     Context->OMSetRenderTargets(_countof(nullRTVs), nullRTVs, nullptr);
     Context->VSSetShaderResources(0, _countof(nullSRVs), nullSRVs);
     Context->PSSetShaderResources(0, _countof(nullSRVs), nullSRVs);

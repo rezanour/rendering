@@ -24,13 +24,13 @@ HRESULT Buffer::Initialize(const ComPtr<ID3D11Device>& device, uint32_t elementS
     HRESULT hr = device->CreateBuffer(&Desc, nullptr, &Resource);
     CHECKHR(hr);
 
-    hr = CreateViews(device, isCounter);
+    hr = CreateViews(device, isStructured, isCounter);
     CHECKHR(hr);
 
     return hr;
 }
 
-HRESULT Buffer::CreateViews(const ComPtr<ID3D11Device>& device, bool isCounter)
+HRESULT Buffer::CreateViews(const ComPtr<ID3D11Device>& device, bool isStructured, bool isCounter)
 {
     HRESULT hr = S_OK;
 
@@ -38,6 +38,7 @@ HRESULT Buffer::CreateViews(const ComPtr<ID3D11Device>& device, bool isCounter)
     {
         D3D11_SHADER_RESOURCE_VIEW_DESC srvd{};
         srvd.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+        srvd.Format = isStructured ? DXGI_FORMAT_UNKNOWN : DXGI_FORMAT_R32_UINT;
         srvd.Buffer.NumElements = Desc.ByteWidth / Desc.StructureByteStride;
         srvd.Buffer.ElementWidth = Desc.StructureByteStride;
         hr = device->CreateShaderResourceView(Resource.Get(), &srvd, &SRV);
@@ -48,9 +49,10 @@ HRESULT Buffer::CreateViews(const ComPtr<ID3D11Device>& device, bool isCounter)
     {
         D3D11_UNORDERED_ACCESS_VIEW_DESC uavd{};
         uavd.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+        uavd.Format = isStructured ? DXGI_FORMAT_UNKNOWN : DXGI_FORMAT_R32_UINT;
         uavd.Buffer.NumElements = Desc.ByteWidth / Desc.StructureByteStride;
         uavd.Buffer.Flags = isCounter ? D3D11_BUFFER_UAV_FLAG_COUNTER : 0;
-        hr = device->CreateUnorderedAccessView(Resource.Get(), nullptr, &UAV);
+        hr = device->CreateUnorderedAccessView(Resource.Get(), &uavd, &UAV);
         CHECKHR(hr);
     }
 

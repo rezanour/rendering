@@ -73,8 +73,8 @@ private:
     ComPtr<ID3D11PixelShader> PixelShader;
     ComPtr<ID3D11ComputeShader> ComputeShader;
 
-    ID3D11UnorderedAccessView* Buffers[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
-    uint32_t BufferCounters[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
+    ID3D11UnorderedAccessView* Buffers[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
+    uint32_t BufferCounters[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
 
     ID3D11RenderTargetView* RenderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT]{};
     ComPtr<ID3D11DepthStencilView> DepthBuffer;
