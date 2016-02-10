@@ -76,7 +76,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
     // TODO: Replace with something better as needed
 
     // Camera info
-    XMVECTOR position = XMVectorSet(0.f, 10.f, 0.f, 1.f);
+    XMVECTOR position = XMVectorSet(0.f, 50.f, 0.f, 1.f);
     XMVECTOR forward = XMVectorSet(1.f, 0.f, 0.f, 0.f);
     XMVECTOR right = XMVectorSet(0.f, 0.f, -1.f, 0.f);
     XMVECTOR up = XMVectorSet(0.f, 1.f, 0.f, 0.f);
@@ -336,7 +336,7 @@ HRESULT GfxInitialize()
     //TheScene->AddLight(light);
 
     srand(0);
-    float y = 50.f;
+    float y = 10.f;
     for (int i = -20; i < 20; i += 2)
     {
         for (int j = -10; j < 10; j += 2)
@@ -347,15 +347,10 @@ HRESULT GfxInitialize()
             light = std::make_shared<PointLight>();
             light->SetColor(XMFLOAT3(r, g, b));
             light->SetPosition(XMFLOAT3(i * 50.f, y, j * 50.f));
-            ((PointLight*)light.get())->SetRadius(50.f);
-            //TheScene->AddLight(light);
+            ((PointLight*)light.get())->SetRadius(20.f);
+            TheScene->AddLight(light);
         }
     }
-    light = std::make_shared<PointLight>();
-    light->SetColor(XMFLOAT3(0.f, 1.f, 1.f));
-    light->SetPosition(XMFLOAT3(0.f, 50.f, 0.f));
-    ((PointLight*)light.get())->SetRadius(50.f);
-    TheScene->AddLight(light);
 
 #endif
 
