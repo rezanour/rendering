@@ -44,11 +44,12 @@ private:
         XMFLOAT3 Color;
         float Pad;
     };
-    static const uint32_t MaxPointLights = 16384;
+
+    static const uint32_t MaxPointLights = 64 * 1024 * 1024;
     std::shared_ptr<Buffer> LightBuffer;
     std::vector<PointLight> PointLightsScratch;
 
-    static const uint32_t LinkedListMaxElements = 65536;
+    static const uint32_t LinkedListMaxElements = 128 * 1024 * 1024;
     struct LightLinkedListNode
     {
         uint32_t LightIndex;

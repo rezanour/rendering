@@ -63,14 +63,13 @@ float4 main(FPFinalPassVSOutput input) : SV_TARGET
     }
 
     uint2 pos = input.Position.xy / TileSize;
-    uint iNode = Heads.Load(pos.y * NumTilesX + pos.x);
+    uint iNode = Heads.Load((pos.y * NumTilesX + pos.x));
     while (iNode != 0xFFFFFFFF)
     {
         LightLinkedListNode node = Nodes[iNode];
         PointLight light = Lights[node.LightIndex];
 
         float3 toLight = light.Position - input.ViewPosition;
-        float3 L = normalize(toLight);
         float dist = length(toLight);
         float denom = (dist / light.Radius) + 1;
         float att = 1.f / (denom * denom);

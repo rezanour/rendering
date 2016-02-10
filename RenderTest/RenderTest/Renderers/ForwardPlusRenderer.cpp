@@ -136,10 +136,10 @@ void ForwardPlusRenderer::RenderZPrePass(const RenderView& view)
 
 void ForwardPlusRenderer::CullLights(const RenderView& view)
 {
-    UNREFERENCED_PARAMETER(view);
-
     uint32_t clearHeads[] = { (uint32_t)-1, (uint32_t)-1, (uint32_t)-1, (uint32_t)-1 };
     Context->ClearUnorderedAccessViewUint(LightLinkedListHeads->GetUAV().Get(), clearHeads);
+
+    XMMATRIX worldToView = XMLoadFloat4x4(&view.WorldToView);
 
     PointLightsScratch.clear();
     for (auto& light : Lights)
@@ -148,7 +148,7 @@ void ForwardPlusRenderer::CullLights(const RenderView& view)
         {
             PointLight pl{};
             pl.Color = light->GetColor();
-            pl.Position = XMFLOAT3(light->GetPosition().x - view.EyePosition.x, light->GetPosition().y - view.EyePosition.y, light->GetPosition().z - view.EyePosition.z);
+            XMStoreFloat3(&pl.Position, XMVector3TransformCoord(XMLoadFloat3(&light->GetPosition()), worldToView));
             pl.Radius = light->GetWorldBoundsRadius();
 
             PointLightsScratch.push_back(pl);

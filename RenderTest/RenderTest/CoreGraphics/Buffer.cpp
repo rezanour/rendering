@@ -42,7 +42,6 @@ HRESULT Buffer::CreateViews(const ComPtr<ID3D11Device>& device, bool isStructure
         {
             srvd.Format = DXGI_FORMAT_UNKNOWN;
             srvd.Buffer.NumElements = Desc.ByteWidth / Desc.StructureByteStride;
-            srvd.Buffer.ElementWidth = Desc.StructureByteStride;
         }
         else
         {
@@ -58,9 +57,16 @@ HRESULT Buffer::CreateViews(const ComPtr<ID3D11Device>& device, bool isStructure
     {
         D3D11_UNORDERED_ACCESS_VIEW_DESC uavd{};
         uavd.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
-        uavd.Format = isStructured ? DXGI_FORMAT_UNKNOWN : DXGI_FORMAT_R32_UINT;
+        uavd.Format = isStructured ? DXGI_FORMAT_UNKNOWN : DXGI_FORMAT_R32_TYPELESS;
         uavd.Buffer.NumElements = Desc.ByteWidth / Desc.StructureByteStride;
-        uavd.Buffer.Flags = isCounter ? D3D11_BUFFER_UAV_FLAG_COUNTER : 0;
+        if (isCounter)
+        {
+            uavd.Buffer.Flags |= D3D11_BUFFER_UAV_FLAG_COUNTER;
+        }
+        if (!isStructured)
+        {
+            uavd.Buffer.Flags |= D3D11_BUFFER_UAV_FLAG_RAW;
+        }
         hr = device->CreateUnorderedAccessView(Resource.Get(), &uavd, &UAV);
         CHECKHR(hr);
     }

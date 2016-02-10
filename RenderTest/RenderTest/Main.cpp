@@ -328,17 +328,30 @@ HRESULT GfxInitialize()
     std::shared_ptr<Light> light = std::make_shared<DirectionalLight>();
     light->SetColor(XMFLOAT3(0.6f, 0.6f, 0.4f));
     light->SetOrientation(QuaternionFromViewDirection(XMVector3Normalize(XMVectorSet(-1, -1, -1, 0)), XMVectorSet(0, 1, 0, 0)));
-    TheScene->AddLight(light);
+    //TheScene->AddLight(light);
 
     light = std::make_shared<DirectionalLight>();
     light->SetColor(XMFLOAT3(0.4f, 0.4f, 0.6f));
     light->SetOrientation(QuaternionFromViewDirection(XMVector3Normalize(XMVectorSet(1, -1, 1, 0)), XMVectorSet(0, 1, 0, 0)));
-    TheScene->AddLight(light);
+    //TheScene->AddLight(light);
 
-    light = std::make_shared<PointLight>();
-    light->SetColor(XMFLOAT3(1.f, 0.f, 0.f));
-    ((PointLight*)light.get())->SetRadius(100.f);
-    TheScene->AddLight(light);
+    srand(0);
+    float y = 50.f;
+    for (int i = -10; i < 10; i += 5)
+    {
+        for (int j = -10; j < 10; j += 5)
+        {
+            float r = (rand() % 256) / 256.f;
+            float g = (rand() % 256) / 256.f;
+            float b = (rand() % 256) / 256.f;
+            light = std::make_shared<PointLight>();
+            light->SetColor(XMFLOAT3(r, g, b));
+            light->SetPosition(XMFLOAT3(i * 50.f, y, j * 50.f));
+            ((PointLight*)light.get())->SetRadius(50.f);
+            TheScene->AddLight(light);
+        }
+    }
+
 #endif
 
     Renderer->SetScene(TheScene);

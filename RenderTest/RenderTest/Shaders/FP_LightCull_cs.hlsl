@@ -14,7 +14,7 @@ struct PointLight
     float Pad;
 };
 
-StructuredBuffer<PointLight> Lights;
+StructuredBuffer<PointLight> Lights : register (t0);
 
 struct LightLinkedListNode
 {
@@ -22,8 +22,8 @@ struct LightLinkedListNode
     uint NextLight;
 };
 
-RWStructuredBuffer<LightLinkedListNode> Nodes;
-RWByteAddressBuffer Heads;
+RWStructuredBuffer<LightLinkedListNode> Nodes : register (u0);
+RWByteAddressBuffer Heads : register (u1);
 
 void AddLight(uint2 tileCoord, uint lightIndex)
 {
@@ -44,7 +44,8 @@ void main(
     uint3 GroupID : SV_GroupID,
     uint3 DispatchThreadID : SV_DispatchThreadID)
 {
-    // TODO: implement culling :)
+    uint iStart = GroupThreadID.y * 4 + GroupThreadID.x;
+    //for (uint i = iStart; i < NumLights; i += 16)
     for (uint i = 0; i < NumLights; ++i)
     {
         if (GroupThreadID.x == 0 && GroupThreadID.y == 0)
