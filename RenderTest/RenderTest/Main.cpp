@@ -337,9 +337,9 @@ HRESULT GfxInitialize()
 
     srand(0);
     float y = 50.f;
-    for (int i = -10; i < 10; i += 5)
+    for (int i = -20; i < 20; i += 2)
     {
-        for (int j = -10; j < 10; j += 5)
+        for (int j = -10; j < 10; j += 2)
         {
             float r = (rand() % 256) / 256.f;
             float g = (rand() % 256) / 256.f;
@@ -348,9 +348,14 @@ HRESULT GfxInitialize()
             light->SetColor(XMFLOAT3(r, g, b));
             light->SetPosition(XMFLOAT3(i * 50.f, y, j * 50.f));
             ((PointLight*)light.get())->SetRadius(50.f);
-            TheScene->AddLight(light);
+            //TheScene->AddLight(light);
         }
     }
+    light = std::make_shared<PointLight>();
+    light->SetColor(XMFLOAT3(0.f, 1.f, 1.f));
+    light->SetPosition(XMFLOAT3(0.f, 50.f, 0.f));
+    ((PointLight*)light.get())->SetRadius(50.f);
+    TheScene->AddLight(light);
 
 #endif
 

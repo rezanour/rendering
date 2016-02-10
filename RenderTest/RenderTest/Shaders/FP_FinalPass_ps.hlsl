@@ -40,6 +40,24 @@ Texture2D AlbedoTexture : register (t3);
 Texture2D NormalTexture : register (t4);
 SamplerState Sampler;
 
+float3 GSProj(float3 v, float3 u)
+{
+    if (!any(u))
+    {
+        return float3(0, 0, 0);
+    }
+
+    return (dot(v, u) / dot(u, u)) * u;
+}
+
+float3x3 GramSchmidtOrthonormalize(float3x3 basis)
+{
+    float3 u1 = basis[0];
+    float3 u2 = basis[1] - GSProj(u1, basis[1]);
+    float3 u3 = basis[2] - GSProj(u1, basis[2]) - GSProj(u2, basis[2]);
+    return float3x3(normalize(u1), normalize(u2), normalize(u3));
+}
+
 float4 main(FPFinalPassVSOutput input) : SV_TARGET
 {
     float4 albedo = AlbedoTexture.Sample(Sampler, input.TexCoord);
@@ -52,8 +70,11 @@ float4 main(FPFinalPassVSOutput input) : SV_TARGET
     normal = normal * 2 - 1;
     normal.y *= -1;
 
-    normal = mul(normal, float3x3(normalize(input.ViewTangent), -normalize(input.ViewBiTangent), normalize(input.ViewNormal)));
-    normal = normalize(normal);
+
+    float3x3 tangToView = float3x3(normalize(input.ViewTangent), -normalize(input.ViewBiTangent), normalize(input.ViewNormal));
+    tangToView = GramSchmidtOrthonormalize(tangToView);
+
+    normal = mul(normal, tangToView);
 
     float3 totalLight = float3(0, 0, 0);
 
@@ -63,17 +84,19 @@ float4 main(FPFinalPassVSOutput input) : SV_TARGET
     }
 
     uint2 pos = input.Position.xy / TileSize;
-    uint iNode = Heads.Load((pos.y * NumTilesX + pos.x));
+    uint iNode = Heads.Load(4 * (pos.y * NumTilesX + pos.x));
     while (iNode != 0xFFFFFFFF)
     {
         LightLinkedListNode node = Nodes[iNode];
         PointLight light = Lights[node.LightIndex];
 
         float3 toLight = light.Position - input.ViewPosition;
+        float L = normalize(toLight);
         float dist = length(toLight);
         float denom = (dist / light.Radius) + 1;
         float att = 1.f / (denom * denom);
-        totalLight += light.Color * att;
+        totalLight += light.Color * att * saturate(dot(normalize(input.ViewNormal), L));
+        break;
 
         iNode = node.NextLight;
     }
