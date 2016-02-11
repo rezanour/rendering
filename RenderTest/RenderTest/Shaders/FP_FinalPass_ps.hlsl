@@ -73,8 +73,9 @@ float4 main(FPFinalPassVSOutput input) : SV_TARGET
         float3 toLight = light.Position - input.ViewPosition;
         float3 L = normalize(toLight);
         float dist = length(toLight);
-        float denom = (dist / light.Radius) + 1;
-        float att = 1.f / (denom * denom);
+        // simple linear att for now
+        float att = 1.f - (dist / light.Radius);
+        att = max(att, 0);
         totalLight += light.Color * att * saturate(dot(normal, L));
 
         iNode = node.NextLight;

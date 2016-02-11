@@ -70,10 +70,10 @@ private:
     // Light culling pass
     struct LightCullConstants
     {
-        uint32_t TileSize;
         uint32_t NumTilesX;
         uint32_t NumLights;
-        uint32_t Pad;
+        float ProjectionA;
+        float ProjectionB;
     };
 
     std::shared_ptr<ShaderPass> LightCullPass;

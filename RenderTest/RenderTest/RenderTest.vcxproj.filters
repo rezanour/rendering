@@ -158,6 +158,9 @@
     <ClInclude Include="CoreGraphics\Buffer.h">
       <Filter>Header Files\CoreGraphics</Filter>
     </ClInclude>
+    <ClInclude Include="ComputeTileConstants.h">
+      <Filter>Resource Files\Shaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\DirectionalLight_MSAAx4_ps.hlsl">

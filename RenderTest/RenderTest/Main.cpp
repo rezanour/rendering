@@ -336,19 +336,21 @@ HRESULT GfxInitialize()
     //TheScene->AddLight(light);
 
     srand(0);
-    float y = 10.f;
-    for (int i = -20; i < 20; i += 2)
+    for (float y = 50; y < 500; y += 100)
     {
-        for (int j = -10; j < 10; j += 2)
+        for (float x = -1000; x < 1000; x += 100)
         {
-            float r = (rand() % 256) / 256.f;
-            float g = (rand() % 256) / 256.f;
-            float b = (rand() % 256) / 256.f;
-            light = std::make_shared<PointLight>();
-            light->SetColor(XMFLOAT3(r, g, b));
-            light->SetPosition(XMFLOAT3(i * 50.f, y, j * 50.f));
-            ((PointLight*)light.get())->SetRadius(20.f);
-            TheScene->AddLight(light);
+            for (float z = -500; z < 500; z += 100)
+            {
+                float r = (rand() % 256) / 256.f;
+                float g = (rand() % 256) / 256.f;
+                float b = (rand() % 256) / 256.f;
+                light = std::make_shared<PointLight>();
+                light->SetColor(XMFLOAT3(r, g, b));
+                light->SetPosition(XMFLOAT3(x, y, z));
+                ((PointLight*)light.get())->SetRadius(100.f);
+                TheScene->AddLight(light);
+            }
         }
     }
 
@@ -361,12 +363,15 @@ HRESULT GfxInitialize()
     BackBufferRT.Viewport.Height = static_cast<float>(BackBufferRT.Texture->GetDesc().Height);
     BackBufferRT.Viewport.MaxDepth = 1.f;
 
+    View.NearClipDistance = 1.f;
+    View.FarClipDistance = 5000.f;
+
     XMStoreFloat4x4(&View.ViewToProjection,
         XMMatrixPerspectiveFovLH(
             XMConvertToRadians(60.f),
             ClientWidth / (float)ClientHeight,
-            0.1f,
-            10000.f));
+            View.NearClipDistance,
+            View.FarClipDistance));
 
     return hr;
 }

@@ -10,6 +10,7 @@
 #include "Scene/Light.h"
 
 // Shaders
+#include "../ComputeTileConstants.h"
 #include "Shaders/ZPrePass_vs.h"
 #include "Shaders/FP_LightCull_cs.h"
 #include "Shaders/FP_FinalPass_vs.h"
@@ -161,9 +162,10 @@ void ForwardPlusRenderer::CullLights(const RenderView& view)
     }
 
     LightCullConstants constants{};
-    constants.TileSize = 4;
-    constants.NumTilesX = RTWidth / 4;
+    constants.NumTilesX = RTWidth / NUM_PIXELS_PER_GROUP_X;
     constants.NumLights = (uint32_t)PointLightsScratch.size();
+    constants.ProjectionA = view.FarClipDistance / (view.FarClipDistance - view.NearClipDistance);
+    constants.ProjectionB = (-view.FarClipDistance * view.NearClipDistance) / (view.FarClipDistance - view.NearClipDistance);
 
     LightCullCB->Update(&constants, sizeof(constants));
 
@@ -174,7 +176,7 @@ void ForwardPlusRenderer::CullLights(const RenderView& view)
     Context->UpdateSubresource(LightBuffer->GetResource().Get(), 0, &box, PointLightsScratch.data(), box.right, box.right);
 
     LightCullPass->Begin();
-    LightCullPass->Dispatch(RTWidth / 4, RTHeight / 4, 1);
+    LightCullPass->Dispatch(RTWidth / NUM_PIXELS_PER_GROUP_X, RTHeight / NUM_PIXELS_PER_GROUP_Y, 1);
     LightCullPass->End();
 }
 
@@ -195,8 +197,8 @@ void ForwardPlusRenderer::RenderFinal(const RenderView& view, const RenderTarget
     // Directional Lights are shared for all objects, so fill up front
     FinalPassPSConstants psConstants{};
     psConstants.NumLights = 0;
-    psConstants.TileSize = 4;
-    psConstants.NumTilesX = RTWidth / 4;
+    psConstants.TileSize = NUM_PIXELS_PER_GROUP_X;
+    psConstants.NumTilesX = RTWidth / NUM_PIXELS_PER_GROUP_X;
 
     for (auto& light : Lights)
     {
@@ -280,11 +282,15 @@ HRESULT ForwardPlusRenderer::RecreateSurfaces(uint32_t width, uint32_t height, u
     RTWidth = width;
     RTHeight = height;
 
+    uint32_t headListWidth = RTWidth / NUM_PIXELS_PER_GROUP_X;
+    uint32_t headListHeight = RTHeight / NUM_PIXELS_PER_GROUP_Y;
+
     LightLinkedListHeads = std::make_shared<Buffer>();
-    hr = LightLinkedListHeads->Initialize(Graphics->GetDevice(), sizeof(uint32_t), sizeof(uint32_t) * RTWidth * RTHeight, false, false);
+    hr = LightLinkedListHeads->Initialize(Graphics->GetDevice(), sizeof(uint32_t), sizeof(uint32_t) * headListWidth * headListHeight, false, false);
     CHECKHR(hr);
 
     LightCullPass->SetCSBuffer(1, LightLinkedListHeads->GetUAV(), true);
+    LightCullPass->SetCSResource(1, DepthBuffer->GetSRV());
 
     ZPrePass->SetViewport(&Viewport);
     ZPrePass->SetDepthBuffer(DepthBuffer->GetDSV());

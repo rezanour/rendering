@@ -69,6 +69,7 @@
       <VariableName>%(Filename)</VariableName>
       <HeaderFileOutput>Shaders\%(Filename).h</HeaderFileOutput>
       <ObjectFileOutput />
+      <TreatWarningAsError>true</TreatWarningAsError>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -96,6 +97,7 @@
       <VariableName>%(Filename)</VariableName>
       <HeaderFileOutput>Shaders\%(Filename).h</HeaderFileOutput>
       <ObjectFileOutput />
+      <TreatWarningAsError>true</TreatWarningAsError>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -123,6 +125,7 @@
     <ClCompile Include="CoreGraphics\VertexFormats.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ComputeTileConstants.h" />
     <ClInclude Include="CoreGraphics\BasePresenter.h" />
     <ClInclude Include="CoreGraphics\Buffer.h" />
     <ClInclude Include="Renderers\BaseRenderer.h" />
