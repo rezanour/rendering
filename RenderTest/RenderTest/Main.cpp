@@ -336,7 +336,7 @@ HRESULT GfxInitialize()
     //TheScene->AddLight(light);
 
     srand(0);
-    for (float y = 50; y < 500; y += 100)
+    for (float y = 50; y < 100; y +=100)
     {
         for (float x = -1000; x < 1000; x += 100)
         {

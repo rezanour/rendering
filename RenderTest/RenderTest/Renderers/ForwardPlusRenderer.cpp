@@ -166,6 +166,7 @@ void ForwardPlusRenderer::CullLights(const RenderView& view)
     constants.NumLights = (uint32_t)PointLightsScratch.size();
     constants.ProjectionA = view.FarClipDistance / (view.FarClipDistance - view.NearClipDistance);
     constants.ProjectionB = (-view.FarClipDistance * view.NearClipDistance) / (view.FarClipDistance - view.NearClipDistance);
+    constants.HalfViewportSize = XMFLOAT2(RTWidth * 0.5f, RTHeight * 0.5f);
 
     LightCullCB->Update(&constants, sizeof(constants));
 

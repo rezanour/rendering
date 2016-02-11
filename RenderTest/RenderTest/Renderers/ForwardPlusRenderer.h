@@ -74,6 +74,8 @@ private:
         uint32_t NumLights;
         float ProjectionA;
         float ProjectionB;
+        XMFLOAT2 HalfViewportSize;
+        XMFLOAT2 Pad0;
     };
 
     std::shared_ptr<ShaderPass> LightCullPass;
