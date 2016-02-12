@@ -12,6 +12,7 @@
 // Shaders
 #include "../ComputeTileConstants.h"
 #include "Shaders/ZPrePass_vs.h"
+#include "Shaders/FP_LightPreprocess_cs.h"
 #include "Shaders/FP_LightCull_cs.h"
 #include "Shaders/FP_FinalPass_vs.h"
 #include "Shaders/FP_FinalPass_ps.h"
@@ -39,6 +40,12 @@ HRESULT ForwardPlusRenderer::Initialize()
     ZPrePass->SetDepthState(Graphics->GetDepthWriteState());
 
     // Light culling
+    hr = Graphics->CreateShaderPassCompute(FP_LightPreprocess_cs, sizeof(FP_LightPreprocess_cs), &LightPreProcessPass);
+    CHECKHR(hr);
+
+    hr = Graphics->CreateConstantBuffer(nullptr, sizeof(LightPreProcessConstants), &LightPreProcessCB);
+    CHECKHR(hr);
+
     hr = Graphics->CreateShaderPassCompute(FP_LightCull_cs, sizeof(FP_LightCull_cs), &LightCullPass);
     CHECKHR(hr);
 
@@ -52,6 +59,9 @@ HRESULT ForwardPlusRenderer::Initialize()
     LightLinkedListNodes = std::make_shared<Buffer>();
     hr = LightLinkedListNodes->Initialize(Graphics->GetDevice(), sizeof(LightLinkedListNode), sizeof(LightLinkedListNode) * LinkedListMaxElements, true, true);
     CHECKHR(hr);
+
+    LightPreProcessPass->SetCSConstantBuffer(0, LightPreProcessCB->GetCB());
+    LightPreProcessPass->SetCSBuffer(0, LightBuffer->GetUAV(), true);
 
     LightCullPass->SetCSConstantBuffer(0, LightCullCB->GetCB());
     LightCullPass->SetCSResource(0, LightBuffer->GetSRV());
@@ -140,7 +150,7 @@ void ForwardPlusRenderer::CullLights(const RenderView& view)
     uint32_t clearHeads[] = { (uint32_t)-1, (uint32_t)-1, (uint32_t)-1, (uint32_t)-1 };
     Context->ClearUnorderedAccessViewUint(LightLinkedListHeads->GetUAV().Get(), clearHeads);
 
-    XMMATRIX worldToView = XMLoadFloat4x4(&view.WorldToView);
+    //XMMATRIX worldToView = XMLoadFloat4x4(&view.WorldToView);
 
     PointLightsScratch.clear();
     for (auto& light : Lights)
@@ -149,7 +159,8 @@ void ForwardPlusRenderer::CullLights(const RenderView& view)
         {
             PointLight pl{};
             pl.Color = light->GetColor();
-            XMStoreFloat3(&pl.Position, XMVector3TransformCoord(XMLoadFloat3(&light->GetPosition()), worldToView));
+            pl.Position = light->GetPosition();
+            //XMStoreFloat3(&pl.Position, XMVector3TransformCoord(XMLoadFloat3(&light->GetPosition()), worldToView));
             pl.Radius = light->GetWorldBoundsRadius();
 
             PointLightsScratch.push_back(pl);
@@ -161,20 +172,30 @@ void ForwardPlusRenderer::CullLights(const RenderView& view)
         return;
     }
 
+    D3D11_BOX box{};
+    box.right = sizeof(PointLight) * (uint32_t)PointLightsScratch.size();
+    box.back = 1;
+    box.bottom = 1;
+    Context->UpdateSubresource(LightBuffer->GetResource().Get(), 0, &box, PointLightsScratch.data(), box.right, box.right);
+
+    // Pre process lights
+    LightPreProcessConstants ppConstants{};
+    ppConstants.WorldToView = view.WorldToView;
+    LightPreProcessCB->Update(&ppConstants, sizeof(ppConstants));
+
+    LightPreProcessPass->Begin();
+    LightPreProcessPass->Dispatch((uint32_t)PointLightsScratch.size(), 1, 1);
+    LightPreProcessPass->End();
+
+    // Cull them
     LightCullConstants constants{};
     constants.NumTilesX = RTWidth / NUM_PIXELS_PER_GROUP_X;
     constants.NumLights = (uint32_t)PointLightsScratch.size();
     constants.ProjectionA = view.FarClipDistance / (view.FarClipDistance - view.NearClipDistance);
     constants.ProjectionB = (-view.FarClipDistance * view.NearClipDistance) / (view.FarClipDistance - view.NearClipDistance);
-    constants.HalfViewportSize = XMFLOAT2(RTWidth * 0.5f, RTHeight * 0.5f);
+    constants.ViewportSize = XMFLOAT2((float)RTWidth, (float)RTHeight);
 
     LightCullCB->Update(&constants, sizeof(constants));
-
-    D3D11_BOX box{};
-    box.right = sizeof(PointLight) * constants.NumLights;
-    box.back = 1;
-    box.bottom = 1;
-    Context->UpdateSubresource(LightBuffer->GetResource().Get(), 0, &box, PointLightsScratch.data(), box.right, box.right);
 
     LightCullPass->Begin();
     LightCullPass->Dispatch(RTWidth / NUM_PIXELS_PER_GROUP_X, RTHeight / NUM_PIXELS_PER_GROUP_Y, 1);

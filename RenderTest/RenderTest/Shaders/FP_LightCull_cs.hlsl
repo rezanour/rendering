@@ -7,7 +7,7 @@ cbuffer Constants
     uint NumLights;
     float ProjectionA;
     float ProjectionB;
-    float2 HalfViewportSize;
+    float2 ViewportSize;
 };
 
 struct PointLight
@@ -15,7 +15,7 @@ struct PointLight
     float3 Position;
     float Radius;
     float3 Color;
-    float Pad;
+    uint IsVisible;
 };
 
 StructuredBuffer<PointLight> Lights : register (t0);
@@ -31,11 +31,11 @@ RWByteAddressBuffer Heads : register (u1);
 
 Texture2D DepthBuffer : register(t1);
 
-float3 RayDirFromPixelCoord(uint2 pixelCoord, float2 halfViewportSize, float depth)
+float3 RayDirFromPixelCoord(uint2 pixelCoord, float2 viewportSize, float depth)
 {
     // convert to [0, 1] range
-    float2 coord = float2((float)pixelCoord.x, (2 * halfViewportSize.y) - (float)pixelCoord.y);
-    coord /= (2 * halfViewportSize);
+    float2 coord = float2((float)pixelCoord.x, viewportSize.y - (float)pixelCoord.y);
+    coord /= viewportSize;
     // convert to [-1, 1] range
     coord = coord * 2 - 1;
     return normalize(float3(coord.xy, depth));
@@ -53,7 +53,6 @@ void AddLight(uint2 tileCoord, uint lightIndex)
     node.NextLight = oldHead;
     Nodes[iNode] = node;
 }
-
 
 #ifndef AVOID_UINT_COMPARE
 // To speed up the min/max derivation, we use uint bit
@@ -87,12 +86,14 @@ void main(
     float depth = DepthBuffer.Load(int3(pixelCoord.xy, 0)).x;
 
     // Find the local view space rays from origin through top left & bottom right corners
-    float3 rayTL = RayDirFromPixelCoord(coordTL, HalfViewportSize, depth);
-    float3 rayBR = RayDirFromPixelCoord(coordBR, HalfViewportSize, depth);
+    float3 rayTL = RayDirFromPixelCoord(coordTL, ViewportSize, depth);
+    float3 rayBR = RayDirFromPixelCoord(coordBR, ViewportSize, depth);
 
     // outward facing normal vectors from froxel sides
     float3 cullLeft = float3(-rayTL.z, 0, rayTL.x);
     float3 cullRight = float3(rayBR.z, 0, -rayBR.x);
+    float3 cullTop = float3(0, rayTL.z, -rayTL.y);
+    float3 cullBottom = float3(0, -rayBR.z, rayBR.y);
 
     // convert back to linear view space depth
     float linearDepth = ProjectionB / (depth - ProjectionA);
@@ -125,6 +126,12 @@ void main(
     {
         PointLight light = Lights[i];
 
+        if (light.IsVisible == 0)
+        {
+            // light completely culled during preprocessing
+            continue;
+        }
+
         // The Froxel z extents (in view space) are MinDepth & MaxDepth.
         if (light.Position.z + light.Radius < minDepth ||
             light.Position.z - light.Radius > maxDepth)
@@ -139,6 +146,16 @@ void main(
         {
             // culled
             continue;
+        }
+
+        // cull against top/bottom side of froxel
+        if (dot(light.Position, cullTop) > light.Radius ||
+            dot(light.Position, cullBottom) > light.Radius)
+        {
+            // culled
+            // TODO: Disabled for now due to bug. Need to debug and see
+            // why top/down culling is wrong.
+            //continue;
         }
 
         AddLight(GroupID.xy, i);

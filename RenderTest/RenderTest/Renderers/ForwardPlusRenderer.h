@@ -68,13 +68,21 @@ private:
     std::shared_ptr<ConstantBuffer> ZPrePassVSCB;
 
     // Light culling pass
+    struct LightPreProcessConstants
+    {
+        XMFLOAT4X4 WorldToView;
+    };
+
+    std::shared_ptr<ShaderPass> LightPreProcessPass;
+    std::shared_ptr<ConstantBuffer> LightPreProcessCB;
+
     struct LightCullConstants
     {
         uint32_t NumTilesX;
         uint32_t NumLights;
         float ProjectionA;
         float ProjectionB;
-        XMFLOAT2 HalfViewportSize;
+        XMFLOAT2 ViewportSize;
         XMFLOAT2 Pad0;
     };
 
